@@ -189,6 +189,9 @@ class ThreadLocalPtr {
     // Only valid index into the the elements array
     DCHECK_NE(id, threadlocal_detail::kEntryIDInvalid);
     te->resetElement(newPtr, id);
+
+    // 主要是担心有异常抛出，所以采用了guard
+    // 如果正常走到这里，就不用guard
     guard.dismiss();
   }
 
@@ -483,6 +486,7 @@ class ThreadLocalPtr {
   ThreadLocalPtr& operator=(const ThreadLocalPtr&) = delete;
 
   static auto getForkGuard() {
+    // 这里好像是个全局锁？
     auto& mutex = StaticMeta::instance().forkHandlerLock_;
     return std::shared_lock{mutex};
   }

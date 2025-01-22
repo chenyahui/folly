@@ -158,8 +158,11 @@ class MPMCQueue
       is_instantiation_of_v<std::allocator, Allocator>;
 
   void initQueue(size_t queueCapacity) {
+    // 计算步幅，避免false shareing问题
     this->stride_ = this->computeStride(queueCapacity);
+    // kSlotPadding作用是避免false shareing，但为什么是2呢
     size_t count = queueCapacity + 2 * this->kSlotPadding;
+
     if (kUsingStdAllocator) {
       this->slots_ = new Slot[count];
     } else {
@@ -885,8 +888,9 @@ class MPMCQueueBase<Derived<T, Atom, Dynamic, Allocator>> {
     Slot* slots;
     size_t cap;
     int stride;
+    // 不用virtual function的原因是，可以减少一次虚表查找
+    // MPMCQueueBase的最上面有说，这种一种CRTP的用法
     if (static_cast<DerivedType*>(this)->tryObtainReadyPushTicket(
-
             ticket, slots, cap, stride)) {
       // we have pre-validated that the ticket won't block
       enqueueWithTicketBase(
@@ -1113,17 +1117,21 @@ class MPMCQueueBase<Derived<T, Atom, Dynamic, Allocator>> {
   /// The simple way to avoid false sharing would be to pad each
   /// SingleElementQueue, but since we have capacity_ of them that could
   /// waste a lot of space.
+  // gcd：最大公约数
   static int computeStride(size_t capacity) noexcept {
+
     static const int smallPrimes[] = {2, 3, 5, 7, 11, 13, 17, 19, 23};
 
     int bestStride = 1;
     size_t bestSep = 1;
     for (int stride : smallPrimes) {
+      // 选用质数的好处是：判断互质简单，只要判断 % = 0即可，因为
       if ((stride % capacity) == 0 || (capacity % stride) == 0) {
         continue;
       }
       size_t sep = stride % capacity;
       sep = std::min(sep, capacity - sep);
+      // 选择最大的，这样可以最大限度的避免false sharing问题
       if (sep > bestSep) {
         bestStride = stride;
         bestSep = sep;
@@ -1150,9 +1158,13 @@ class MPMCQueueBase<Derived<T, Atom, Dynamic, Allocator>> {
   /// failure.
   bool tryObtainReadyPushTicket(
       uint64_t& ticket, Slot*& slots, size_t& cap, int& stride) noexcept {
+    // pushTicket_是一个atomic<uint64_t>
     ticket = pushTicket_.load(std::memory_order_acquire); // A
+    // detail::SingleElementQueue<T, Atom>
     slots = slots_;
+    // size_t
     cap = capacity_;
+    // 步幅
     stride = stride_;
     while (true) {
       if (!slots[idx(ticket, cap, stride)].mayEnqueue(turn(ticket, cap))) {
