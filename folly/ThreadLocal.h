@@ -176,7 +176,7 @@ class ThreadLocalPtr {
     auto rlocked = getForkGuard();
     threadlocal_detail::ThreadEntry* te = StaticMeta::getThreadEntry(&id_);
     auto id = id_.getOrInvalid();
-    // Only valid index into the the elements array
+    // Only valid index into the elements array
     DCHECK_NE(id, threadlocal_detail::kEntryIDInvalid);
     return static_cast<T*>(te->releaseElement(id));
   }
@@ -186,7 +186,7 @@ class ThreadLocalPtr {
     auto guard = makeGuard([&] { delete newPtr; });
     threadlocal_detail::ThreadEntry* te = StaticMeta::getThreadEntry(&id_);
     uint32_t id = id_.getOrInvalid();
-    // Only valid index into the the elements array
+    // Only valid index into the elements array
     DCHECK_NE(id, threadlocal_detail::kEntryIDInvalid);
     te->resetElement(newPtr, id);
 
@@ -244,7 +244,7 @@ class ThreadLocalPtr {
     auto rlocked = getForkGuard();
     threadlocal_detail::ThreadEntry* te = StaticMeta::getThreadEntry(&id_);
     uint32_t id = id_.getOrInvalid();
-    // Only valid index into the the elements array
+    // Only valid index into the elements array
     DCHECK_NE(id, threadlocal_detail::kEntryIDInvalid);
     te->resetElement(newPtr, deleter, id);
     guard.dismiss();
