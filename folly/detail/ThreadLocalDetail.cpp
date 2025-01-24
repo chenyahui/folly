@@ -428,6 +428,7 @@ void StaticMetaBase::reserve(EntryID* id) {
   ThreadEntry* threadEntry = (*threadEntry_)();
   size_t prevCapacity = threadEntry->getElementsCapacity();
 
+  // 分配ID
   uint32_t idval = id->getOrAllocate(meta);
   if (prevCapacity > idval) {
     return;
