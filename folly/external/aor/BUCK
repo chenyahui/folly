@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "memcpy_aarch64",
     srcs = [
         "memcpy-advsimd.S",
@@ -19,7 +21,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "memcpy_aarch64-use",
     srcs = [
         "memcpy-advsimd.S",
@@ -41,7 +44,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "memset_aarch64",
     srcs = [
         "memset-advsimd.S",
@@ -55,7 +59,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "memset_aarch64-use",
     srcs = [
         "memset-advsimd.S",

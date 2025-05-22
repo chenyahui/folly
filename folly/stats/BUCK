@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "bucketed_time_series",
     headers = [
         "BucketedTimeSeries.h",
@@ -17,7 +19,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "histogram",
     headers = [
         "Histogram.h",
@@ -35,7 +38,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "streaming_stats",
     headers = [
         "StreamingStats.h",
@@ -45,7 +49,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "multi_level_time_series",
     headers = [
         "MultiLevelTimeSeries.h",
@@ -61,7 +66,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "quantile_estimator",
     srcs = [
         "QuantileEstimator.cpp",
@@ -76,7 +82,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "quantile_histogram",
     headers = [
         "QuantileHistogram.h",
@@ -93,7 +100,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "tdigest",
     srcs = [
         "TDigest.cpp",
@@ -113,7 +121,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "digest_builder",
     srcs = [],
     headers = [
@@ -128,7 +137,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "timeseries_histogram",
     headers = [
         "TimeseriesHistogram.h",

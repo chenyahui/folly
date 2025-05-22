@@ -1,8 +1,111 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load(
+    "@fbsource//xplat/folly:defs.bzl",
+    "folly_xplat_library",
+)
+load("@fbsource//xplat/pfh/triage_InfrastructureSupermoduleOptou:DEFS.bzl", "triage_InfrastructureSupermoduleOptou")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "net_ops_dispatcher",
+    srcs = [
+        "NetOpsDispatcher.cpp",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "NetOpsDispatcher.h",
+    ],
+    deps = [
+        "//xplat/folly/net:net_ops",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "network_socket",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "NetworkSocket.h",
+    ],
+    deps = [
+        "//xplat/folly:portability_windows",
+        "//xplat/folly/net/detail:socket_file_descriptor_map",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "net_ops",
+    srcs = [
+        "NetOps.cpp",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "NetOps.h",
+    ],
+    deps = [
+        "//xplat/folly:scope_guard",
+        "//xplat/folly:utility",
+        "//xplat/folly/net/detail:socket_file_descriptor_map",
+    ],
+    exported_deps = [
+        "//xplat/folly:portability",
+        "//xplat/folly:portability_iovec",
+        "//xplat/folly:portability_sys_types",
+        "//xplat/folly:portability_time",
+        "//xplat/folly:portability_windows",
+        "//xplat/folly/net:network_socket",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "tcpinfo_dispatcher",
+    srcs = [
+        "TcpInfoDispatcher.cpp",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "TcpInfoDispatcher.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:expected",
+        "//xplat/folly/net:net_ops_dispatcher",
+        "//xplat/folly/net:tcpinfo",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "tcpinfo",
+    srcs = [
+        "TcpInfo.cpp",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "TcpInfo.h",
+        "TcpInfoTypes.h",
+    ],
+    deps = [
+        "//third-party/glog:glog",
+        "//xplat/folly:portability_sockets",
+    ],
+    exported_deps = [
+        "//xplat/folly:expected",
+        "//xplat/folly:optional",
+        "//xplat/folly:string",
+        "//xplat/folly/net:net_ops_dispatcher",
+        "//xplat/folly/net:network_socket",
+    ],
+)
+
+# !!!! fbcode/folly/net/TARGETS was merged into this file, see https://fburl.com/workplace/xl8l9yuo for more info !!!!
+
+fbcode_target(
+    _kind = cpp_library,
     name = "net_ops",
     srcs = ["NetOps.cpp"],
     headers = ["NetOps.h"],
@@ -22,7 +125,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "net_ops_dispatcher",
     srcs = ["NetOpsDispatcher.cpp"],
     headers = ["NetOpsDispatcher.h"],
@@ -31,7 +135,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "network_socket",
     headers = ["NetworkSocket.h"],
     exported_deps = [
@@ -40,7 +145,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "tcpinfo",
     srcs = ["TcpInfo.cpp"],
     headers = [
@@ -62,7 +168,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "tcpinfo_dispatcher",
     srcs = ["TcpInfoDispatcher.cpp"],
     headers = ["TcpInfoDispatcher.h"],

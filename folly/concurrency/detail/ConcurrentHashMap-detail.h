@@ -21,6 +21,7 @@
 #include <mutex>
 #include <new>
 
+#include <folly/ScopeGuard.h>
 #include <folly/container/HeterogeneousAccess.h>
 #include <folly/container/detail/F14Mask.h>
 #include <folly/lang/Exception.h>
@@ -43,6 +44,8 @@ enum class InsertType {
   MATCH, // assign_if_equal (not in std).  For concurrent maps, a
          // way to atomically change a value if equal to some other
          // value.
+  MATCH_OR_DOES_NOT_EXIST, // behaves like MATCH if key exists, inserts if key
+                           // does not exist.
 };
 
 template <
@@ -131,10 +134,14 @@ class ValueHolder<
   template <typename Arg, typename... Args>
   ValueHolder(std::piecewise_construct_t, Arg&& k, Args&&... args) {
     item_ = (CountedItem*)Allocator().allocate(sizeof(CountedItem));
+    auto g = makeGuard([&] {
+      Allocator().deallocate((uint8_t*)item_, sizeof(CountedItem));
+    });
     new (item_) CountedItem(
         std::piecewise_construct,
         std::forward<Arg>(k),
         std::forward<Args>(args)...);
+    g.dismiss();
   }
 
   ~ValueHolder() {
@@ -150,6 +157,37 @@ class ValueHolder<
     return item_->getItem();
   }
 }; // ValueHolder specialization
+
+template <typename Node, typename Allocator>
+struct AllocNodeGuard : NonCopyableNonMovable {
+  Allocator alloc;
+  Node* node{};
+
+  void dismiss() { node = nullptr; }
+  Node* release() { return std::exchange(node, nullptr); }
+
+  template <typename... Arg>
+  explicit AllocNodeGuard(Allocator alloc_, Arg&&... arg)
+      : alloc{std::move(alloc_)}, node{(Node*)alloc_.allocate(sizeof(Node))} {
+    auto guard = makeGuard([&] {
+      alloc.deallocate((uint8_t*)node, sizeof(Node));
+    });
+    new (node) Node(std::forward<Arg>(arg)...);
+    guard.dismiss();
+  }
+
+  ~AllocNodeGuard() {
+    if (node) {
+      node->~Node();
+      alloc.deallocate((uint8_t*)node, sizeof(Node));
+    }
+  }
+
+  template <typename... Arg>
+  static Node* make(Allocator alloc_, Arg&&... arg) {
+    return AllocNodeGuard(alloc_, std::forward<Arg>(arg)...).release();
+  }
+};
 
 // hazptr deleter that can use an allocator.
 template <typename Allocator>
@@ -411,7 +449,7 @@ class alignas(64) BucketTable {
   std::size_t erase(size_t h, const K& key, Iterator* iter, MatchFunc match) {
     Node* node{nullptr};
     {
-      std::lock_guard<Mutex> g(m_);
+      std::lock_guard g(m_);
 
       size_t bcount = bucket_count_.load(std::memory_order_relaxed);
       auto buckets = buckets_.load(std::memory_order_relaxed);
@@ -465,7 +503,7 @@ class alignas(64) BucketTable {
     size_t bcount;
     Buckets* buckets;
     {
-      std::lock_guard<Mutex> g(m_);
+      std::lock_guard g(m_);
       bcount = bucket_count_.load(std::memory_order_relaxed);
       auto newbuckets = Buckets::create(bcount, cohort);
       buckets = buckets_.load(std::memory_order_relaxed);
@@ -477,7 +515,7 @@ class alignas(64) BucketTable {
   }
 
   void max_load_factor(float factor) {
-    std::lock_guard<Mutex> g(m_);
+    std::lock_guard g(m_);
     load_factor_ = factor;
     load_factor_nodes_ =
         bucket_count_.load(std::memory_order_relaxed) * load_factor_;
@@ -667,12 +705,14 @@ class alignas(64) BucketTable {
       Node* cur,
       hazptr_obj_cohort<Atom>* cohort,
       Args&&... args) {
-    std::unique_lock<Mutex> g(m_);
+    std::unique_lock g(m_);
 
     size_t bcount = bucket_count_.load(std::memory_order_relaxed);
     auto buckets = buckets_.load(std::memory_order_relaxed);
     // Check for rehash needed for DOES_NOT_EXIST
-    if (size() >= load_factor_nodes_ && type == InsertType::DOES_NOT_EXIST) {
+    if (size() >= load_factor_nodes_ &&
+        (type == InsertType::DOES_NOT_EXIST ||
+         type == InsertType::MATCH_OR_DOES_NOT_EXIST)) {
       if (max_size_ && size() << 1 > max_size_) {
         // Would exceed max size.
         throw_exception<std::bad_alloc>();
@@ -691,22 +731,26 @@ class alignas(64) BucketTable {
     auto& hazbuckets = it.hazptrs_[0];
     auto& haznode = it.hazptrs_[1];
     hazbuckets.reset_protection(buckets);
+    bool matched = false;
     while (node) {
       // Is the key found?
       if (KeyEqual()(k, node->getItem().first)) {
         it.setNode(node, buckets, bcount, idx);
         haznode.reset_protection(node);
-        if (type == InsertType::MATCH) {
+        if (type == InsertType::MATCH ||
+            type == InsertType::MATCH_OR_DOES_NOT_EXIST) {
           if (!match(node->getItem().second)) {
             return false;
           }
+          matched = true;
         }
-        if (type == InsertType::DOES_NOT_EXIST) {
+        if (type == InsertType::DOES_NOT_EXIST ||
+            (type == InsertType::MATCH_OR_DOES_NOT_EXIST && !matched)) {
           return false;
         } else {
           if (!cur) {
-            cur = (Node*)Allocator().allocate(sizeof(Node));
-            new (cur) Node(cohort, std::forward<Args>(args)...);
+            cur = AllocNodeGuard<Node, Allocator>::make(
+                Allocator(), cohort, std::forward<Args>(args)...);
           }
           auto next = node->next_.load(std::memory_order_relaxed);
           cur->next_.store(next, std::memory_order_relaxed);
@@ -726,7 +770,9 @@ class alignas(64) BucketTable {
       prev = &node->next_;
       node = node->next_.load(std::memory_order_relaxed);
     }
-    if (type != InsertType::DOES_NOT_EXIST && type != InsertType::ANY) {
+    if (type != InsertType::DOES_NOT_EXIST &&
+        (type != InsertType::MATCH_OR_DOES_NOT_EXIST || matched) &&
+        type != InsertType::ANY) {
       haznode.reset_protection();
       hazbuckets.reset_protection();
       return false;
@@ -754,9 +800,11 @@ class alignas(64) BucketTable {
     if (!cur) {
       // InsertType::ANY
       // OR DOES_NOT_EXIST, but only in the try_emplace case
-      DCHECK(type == InsertType::ANY || type == InsertType::DOES_NOT_EXIST);
-      cur = (Node*)Allocator().allocate(sizeof(Node));
-      new (cur) Node(cohort, std::forward<Args>(args)...);
+      DCHECK(
+          type == InsertType::ANY || type == InsertType::DOES_NOT_EXIST ||
+          (type == InsertType::MATCH_OR_DOES_NOT_EXIST && !matched));
+      cur = AllocNodeGuard<Node, Allocator>::make(
+          Allocator(), cohort, std::forward<Args>(args)...);
     }
     cur->next_.store(headnode, std::memory_order_relaxed);
     head->store(cur, std::memory_order_release);
@@ -1221,7 +1269,7 @@ class alignas(64) SIMDTable {
 
     auto hp = splitHash(h);
 
-    std::unique_lock<Mutex> g(m_);
+    std::unique_lock g(m_);
 
     if (!prepare_insert(
             it,
@@ -1238,8 +1286,8 @@ class alignas(64) SIMDTable {
       return false;
     }
 
-    auto cur = (Node*)Allocator().allocate(sizeof(Node));
-    new (cur) Node(cohort, std::forward<Args>(args)...);
+    auto cur = AllocNodeGuard<Node, Allocator>::make(
+        Allocator(), cohort, std::forward<Args>(args)...);
 
     if (!node) {
       std::tie(chunk_idx, tag_idx) =
@@ -1276,7 +1324,7 @@ class alignas(64) SIMDTable {
 
     auto hp = splitHash(h);
 
-    std::unique_lock<Mutex> g(m_);
+    std::unique_lock g(m_);
 
     if (!prepare_insert(
             it,
@@ -1353,7 +1401,7 @@ class alignas(64) SIMDTable {
   std::size_t erase(size_t h, const K& key, Iterator* iter, MatchFunc match) {
     const HashPair hp = splitHash(h);
 
-    std::unique_lock<Mutex> g(m_);
+    std::unique_lock g(m_);
 
     size_t ccount = chunk_count_.load(std::memory_order_relaxed);
     auto chunks = chunks_.load(std::memory_order_relaxed);
@@ -1409,7 +1457,7 @@ class alignas(64) SIMDTable {
     size_t ccount;
     Chunks* chunks;
     {
-      std::lock_guard<Mutex> g(m_);
+      std::lock_guard g(m_);
       ccount = chunk_count_.load(std::memory_order_relaxed);
       auto newchunks = Chunks::create(ccount, cohort);
       chunks = chunks_.load(std::memory_order_relaxed);
@@ -1426,7 +1474,7 @@ class alignas(64) SIMDTable {
     if (factor > 1.0) {
       throw_exception<std::invalid_argument>("load factor must be <= 1.0");
     }
-    std::lock_guard<Mutex> g(m_);
+    std::lock_guard g(m_);
     load_factor_ = factor;
     auto ccount = chunk_count_.load(std::memory_order_relaxed);
     grow_threshold_ = ccount * Chunk::kCapacity * load_factor_;
@@ -1502,7 +1550,9 @@ class alignas(64) SIMDTable {
     ccount = chunk_count_.load(std::memory_order_relaxed);
     chunks = chunks_.load(std::memory_order_relaxed);
 
-    if (size() >= grow_threshold_ && type == InsertType::DOES_NOT_EXIST) {
+    if (size() >= grow_threshold_ &&
+        (type == InsertType::DOES_NOT_EXIST ||
+         type == InsertType::MATCH_OR_DOES_NOT_EXIST)) {
       if (max_size_ && size() << 1 > max_size_) {
         // Would exceed max size.
         throw_exception<std::bad_alloc>();
@@ -1519,7 +1569,8 @@ class alignas(64) SIMDTable {
     if (node) {
       it.hazptrs_[1].reset_protection(node);
       it.setNode(node, chunks, ccount, chunk_idx, tag_idx);
-      if (type == InsertType::MATCH) {
+      if (type == InsertType::MATCH ||
+          type == InsertType::MATCH_OR_DOES_NOT_EXIST) {
         if (!match(node->getItem().second)) {
           return false;
         }
@@ -1527,7 +1578,9 @@ class alignas(64) SIMDTable {
         return false;
       }
     } else {
-      if (type != InsertType::DOES_NOT_EXIST && type != InsertType::ANY) {
+      if (type != InsertType::DOES_NOT_EXIST &&
+          type != InsertType::MATCH_OR_DOES_NOT_EXIST &&
+          type != InsertType::ANY) {
         it.hazptrs_[0].reset_protection();
         return false;
       }
@@ -1724,18 +1777,17 @@ class alignas(64) ConcurrentHashMapSegment {
 
   template <typename Key, typename Value>
   bool insert(Iterator& it, size_t h, Key&& k, Value&& v) {
-    auto node = (Node*)Allocator().allocate(sizeof(Node));
-    new (node) Node(cohort_, std::forward<Key>(k), std::forward<Value>(v));
+    concurrenthashmap::AllocNodeGuard<Node, Allocator> g(
+        Allocator(), cohort_, std::forward<Key>(k), std::forward<Value>(v));
     auto res = insert_internal(
         it,
         h,
-        node->getItem().first,
+        g.node->getItem().first,
         InsertType::DOES_NOT_EXIST,
         [](const ValueType&) { return false; },
-        node);
-    if (!res) {
-      node->~Node();
-      Allocator().deallocate((uint8_t*)node, sizeof(Node));
+        g.node);
+    if (res) {
+      g.dismiss();
     }
     return res;
   }
@@ -1767,55 +1819,76 @@ class alignas(64) ConcurrentHashMapSegment {
 
   template <typename Key, typename Value>
   bool insert_or_assign(Iterator& it, size_t h, Key&& k, Value&& v) {
-    auto node = (Node*)Allocator().allocate(sizeof(Node));
-    new (node) Node(cohort_, std::forward<Key>(k), std::forward<Value>(v));
+    concurrenthashmap::AllocNodeGuard<Node, Allocator> g(
+        Allocator(), cohort_, std::forward<Key>(k), std::forward<Value>(v));
     auto res = insert_internal(
         it,
         h,
-        node->getItem().first,
+        g.node->getItem().first,
         InsertType::ANY,
         [](const ValueType&) { return false; },
-        node);
-    if (!res) {
-      node->~Node();
-      Allocator().deallocate((uint8_t*)node, sizeof(Node));
+        g.node);
+    if (res) {
+      g.dismiss();
+    }
+    return res;
+  }
+
+  template <typename Key, typename Value, typename Predicate>
+  bool insert_or_assign_if(
+      Iterator& it, size_t h, Key&& k, Value&& desired, Predicate&& predicate) {
+    concurrenthashmap::AllocNodeGuard<Node, Allocator> g(
+        Allocator(),
+        cohort_,
+        std::forward<Key>(k),
+        std::forward<Value>(desired));
+    auto res = insert_internal(
+        it,
+        h,
+        g.node->getItem().first,
+        InsertType::MATCH_OR_DOES_NOT_EXIST,
+        std::forward<Predicate>(predicate),
+        g.node);
+    if (res) {
+      g.dismiss();
     }
     return res;
   }
 
   template <typename Key, typename Value>
   bool assign(Iterator& it, size_t h, Key&& k, Value&& v) {
-    auto node = (Node*)Allocator().allocate(sizeof(Node));
-    new (node) Node(cohort_, std::forward<Key>(k), std::forward<Value>(v));
+    concurrenthashmap::AllocNodeGuard<Node, Allocator> g(
+        Allocator(), cohort_, std::forward<Key>(k), std::forward<Value>(v));
     auto res = insert_internal(
         it,
         h,
-        node->getItem().first,
+        g.node->getItem().first,
         InsertType::MUST_EXIST,
         [](const ValueType&) { return false; },
-        node);
-    if (!res) {
-      node->~Node();
-      Allocator().deallocate((uint8_t*)node, sizeof(Node));
+        g.node);
+    if (res) {
+      g.dismiss();
     }
     return res;
   }
+
   template <typename Key, typename Value, typename Predicate>
   bool assign_if(
       Iterator& it, size_t h, Key&& k, Value&& desired, Predicate&& predicate) {
-    auto node = (Node*)Allocator().allocate(sizeof(Node));
-    new (node)
-        Node(cohort_, std::forward<Key>(k), std::forward<Value>(desired));
+    concurrenthashmap::AllocNodeGuard<Node, Allocator> g(
+        Allocator(),
+        cohort_,
+        std::forward<Key>(k),
+        std::forward<Value>(desired));
     auto res = insert_internal(
         it,
         h,
-        node->getItem().first,
+        g.node->getItem().first,
         InsertType::MATCH,
         std::forward<Predicate>(predicate),
-        node);
-    if (!res) {
-      node->~Node();
-      Allocator().deallocate((uint8_t*)node, sizeof(Node));
+        g.node);
+    if (res) {
+      g.dismiss();
     }
     return res;
   }

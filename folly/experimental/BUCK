@@ -1,18 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
-    name = "elias_fano_coding",
-    headers = [
-        "EliasFanoCoding.h",
-    ],
-    exported_deps = [
-        "//folly/compression/elias_fano:elias_fano_coding",
-    ],
-)
-
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "event_count",
     headers = [
         "EventCount.h",
@@ -22,7 +14,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "flat_combining_priority_queue",
     headers = [
         "FlatCombiningPriorityQueue.h",
@@ -32,17 +25,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
-    name = "relaxed_concurrent_priority_queue",
-    headers = [
-        "RelaxedConcurrentPriorityQueue.h",
-    ],
-    exported_deps = [
-        "//folly/concurrency/container:relaxed_concurrent_priority_queue",
-    ],
-)
-
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "function_scheduler",
     headers = [
         "FunctionScheduler.h",
@@ -52,7 +36,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "test_util",
     headers = [
         "TestUtil.h",
@@ -62,7 +47,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "threaded_repeating_function_runner",
     headers = [
         "ThreadedRepeatingFunctionRunner.h",

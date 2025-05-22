@@ -1,10 +1,12 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "base_benchmark",
     srcs = ["BaseBenchmark.cpp"],
     headers = [],
@@ -17,7 +19,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "base_test",
     srcs = ["BaseTest.cpp"],
     headers = [],
@@ -40,7 +43,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "combine_test",
     srcs = ["CombineTest.cpp"],
     headers = [],
@@ -57,7 +61,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "file_benchmark",
     srcs = ["FileBenchmark.cpp"],
     headers = [],
@@ -72,7 +77,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "file_test",
     srcs = ["FileTest.cpp"],
     headers = [],
@@ -88,7 +94,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "parallel_benchmark",
     srcs = ["ParallelBenchmark.cpp"],
     headers = [],
@@ -102,7 +109,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "parallel_test",
     srcs = ["ParallelTest.cpp"],
     headers = [],
@@ -120,7 +128,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "parallel_map_benchmark",
     srcs = ["ParallelMapBenchmark.cpp"],
     headers = [],
@@ -132,7 +141,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "parallel_map_test",
     srcs = ["ParallelMapTest.cpp"],
     headers = [],
@@ -148,7 +158,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "string_benchmark",
     srcs = ["StringBenchmark.cpp"],
     headers = [],
@@ -164,7 +175,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "string_test",
     srcs = ["StringTest.cpp"],
     headers = [],
@@ -175,7 +187,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "istream_test",
     srcs = ["IStreamTest.cpp"],
     headers = [],
@@ -187,7 +200,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "util",
     headers = ["Bench.h"],
     exported_deps = [

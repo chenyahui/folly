@@ -23,6 +23,8 @@
 #include <folly/portability/GTest.h>
 #include <folly/small_vector.h>
 
+FOLLY_GNU_DISABLE_WARNING("-Wself-move")
+
 namespace {
 
 template <typename I>
@@ -569,6 +571,25 @@ TEST(Tape, Iteration) {
 
   folly::string_tape st2(st.rbegin(), st.rend());
   ASSERT_THAT(st2, testing::ElementsAre("1000", "100", "10", "0"));
+}
+
+TEST(Tape, ReserveShrink) {
+  // There is a limit to what we can test since reserve/shrink
+  // have very little guarantees.
+
+  folly::string_tape st;
+  st.reserve(2, 7);
+
+  st.push_back("abc");
+  const char* beforePushSecond = st[0].data();
+
+  st.push_back("defg");
+  const char* afterPushSecond = st[0].data();
+  ASSERT_EQ(beforePushSecond, afterPushSecond);
+
+  st.shrink_to_fit();
+  const char* afterShrink = st[0].data();
+  ASSERT_EQ(beforePushSecond, afterShrink);
 }
 
 TEST(Tape, TapeOfTapes) {

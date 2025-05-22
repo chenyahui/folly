@@ -23,11 +23,17 @@
 #include <iosfwd>
 #include <string>
 
+#include <variant>
 #include <folly/IPAddress.h>
 #include <folly/Portability.h>
 #include <folly/Range.h>
 #include <folly/net/NetworkSocket.h>
+#include <folly/portability/Config.h>
 #include <folly/portability/Sockets.h>
+
+#if FOLLY_HAVE_VSOCK
+#include <linux/vm_sockets.h>
+#endif
 
 namespace folly {
 
@@ -94,56 +100,23 @@ class SocketAddress {
     setFromIpAddrPort(ipAddr, port);
   }
 
-  SocketAddress(const SocketAddress& addr) {
-    port_ = addr.port_;
-    if (addr.getFamily() == AF_UNIX) {
-      storage_.un.init(addr.storage_.un);
-    } else {
-      storage_ = addr.storage_;
-    }
-    external_ = addr.external_;
-  }
+  SocketAddress(const SocketAddress& addr) { storage_ = addr.storage_; }
 
   SocketAddress& operator=(const SocketAddress& addr) {
-    if (!external_) {
-      if (addr.getFamily() != AF_UNIX) {
-        storage_ = addr.storage_;
-      } else {
-        storage_ = addr.storage_;
-        storage_.un.init(addr.storage_.un);
-      }
-    } else {
-      if (addr.getFamily() == AF_UNIX) {
-        storage_.un.copy(addr.storage_.un);
-      } else {
-        storage_.un.free();
-        storage_ = addr.storage_;
-      }
-    }
-    port_ = addr.port_;
-    external_ = addr.external_;
+    storage_ = addr.storage_;
     return *this;
   }
 
   SocketAddress(SocketAddress&& addr) noexcept {
-    storage_ = addr.storage_;
-    port_ = addr.port_;
-    external_ = addr.external_;
-    addr.external_ = false;
+    storage_ = std::move(addr.storage_);
   }
 
   SocketAddress& operator=(SocketAddress&& addr) {
-    std::swap(storage_, addr.storage_);
-    std::swap(port_, addr.port_);
-    std::swap(external_, addr.external_);
+    storage_ = std::move(addr.storage_);
     return *this;
   }
 
-  ~SocketAddress() {
-    if (external_) {
-      storage_.un.free();
-    }
-  }
+  ~SocketAddress() = default;
 
   /**
    * Return whether this SocketAddress is initialized.
@@ -176,13 +149,7 @@ class SocketAddress {
    * Reset this SocketAddress by clearing the associated address and
    * freeing up any external storage being used.
    */
-  void reset() {
-    if (external_) {
-      storage_.un.free();
-    }
-    storage_.addr = folly::IPAddress();
-    external_ = false;
-  }
+  void reset() { storage_ = IPAddr(); }
 
   /**
    * @overloadbrief Initialize this SocketAddress from a hostname and port.
@@ -334,6 +301,13 @@ class SocketAddress {
     return setFromHostPort(hostAndPort.c_str());
   }
 
+#if FOLLY_HAVE_VSOCK
+  /**
+   * Initialize this SocketAddress from a VSOCK CID and port.
+   */
+  void setFromVsockCIDPort(uint32_t cid, uint32_t port);
+#endif
+
   /**
    * Returns the port number from the given socketaddr structure.
    *
@@ -442,7 +416,7 @@ class SocketAddress {
   /**
    * Initialize this SocketAddress from a struct sockaddr_in6.
    *
-   * @param address  A struct sockaddr_in to initialize from
+   * @param address  A struct sockaddr_in6 to initialize from
    */
   void setFromSockaddr(const struct sockaddr_in6* address);
 
@@ -460,6 +434,15 @@ class SocketAddress {
    */
   void setFromSockaddr(const struct sockaddr_un* address, socklen_t addrlen);
 
+#if FOLLY_HAVE_VSOCK
+  /**
+   * Initialize this SocketAddress from a struct sockaddr_vm.
+   *
+   * @param address  A struct sockaddr_vm to initialize from
+   */
+  void setFromSockaddr(const struct sockaddr_vm* address);
+#endif
+
   /**
    * Fill in a given sockaddr_storage with the ip or unix address.
    *
@@ -468,11 +451,23 @@ class SocketAddress {
    * @return The actual size of the socket address
    */
   socklen_t getAddress(sockaddr_storage* addr) const {
-    if (!external_) {
-      return storage_.addr.toSockaddrStorage(addr, htons(port_));
+    if (isFamilyInet()) {
+      return std::get<IPAddr>(storage_).ip.toSockaddrStorage(
+          addr, htons(std::get<IPAddr>(storage_).port));
+#if FOLLY_HAVE_VSOCK
+    } else if (holdsVsock()) {
+      const auto& vsockAddr = std::get<VsockAddr>(storage_);
+      auto* svm = reinterpret_cast<sockaddr_vm*>(addr);
+      memset(svm, 0, sizeof(sockaddr_vm));
+      svm->svm_family = AF_VSOCK;
+      svm->svm_cid = vsockAddr.cid;
+      svm->svm_port = vsockAddr.port;
+      return sizeof(sockaddr_vm);
+#endif
     } else {
-      memcpy(addr, storage_.un.addr, sizeof(*storage_.un.addr));
-      return storage_.un.len;
+      const auto& unixAddr = std::get<ExternalUnixAddr>(storage_);
+      memcpy(addr, unixAddr.addr, sizeof(*unixAddr.addr));
+      return unixAddr.len;
     }
   }
 
@@ -502,8 +497,15 @@ class SocketAddress {
    * @return Socket address family
    */
   sa_family_t getFamily() const {
-    assert(external_ || AF_UNIX != storage_.addr.family());
-    return external_ ? sa_family_t(AF_UNIX) : storage_.addr.family();
+    if (holdsUnix()) {
+      return sa_family_t(AF_UNIX);
+#if FOLLY_HAVE_VSOCK
+    } else if (holdsVsock()) {
+      return sa_family_t(AF_VSOCK);
+#endif
+    } else {
+      return std::get<IPAddr>(storage_).ip.family();
+    }
   }
 
   /**
@@ -561,6 +563,17 @@ class SocketAddress {
    */
   uint16_t getPort() const;
 
+#if FOLLY_HAVE_VSOCK
+  /**
+   * Get the port for a VSOCK address.
+   *
+   * Raises std::invalid_argument if this is not a VSOCK address.
+   *
+   * @return The port, in host byte order
+   */
+  uint32_t getVsockPort() const;
+#endif
+
   /**
    * Set the IPv4 or IPv6 port for this address.
    *
@@ -577,7 +590,9 @@ class SocketAddress {
    * false otherwise
    */
   bool isIPv4Mapped() const {
-    return (getFamily() == AF_INET6 && storage_.addr.isIPv4Mapped());
+    return (
+        getFamily() == AF_INET6 &&
+        std::get<IPAddr>(storage_).ip.isIPv4Mapped());
   }
 
   /**
@@ -637,6 +652,17 @@ class SocketAddress {
    * @return Path name for a Unix domain socket
    */
   std::string getPath() const;
+
+#if FOLLY_HAVE_VSOCK
+  /**
+   * Get the CID (Context Identifier) for a VSOCK address.
+   *
+   * Raises std::invalid_argument if called on a non-VSOCK address.
+   *
+   * @return CID for a VSOCK address
+   */
+  uint32_t getVsockCID() const;
+#endif
 
   /**
    * Get human-readable string representation of the address.
@@ -698,22 +724,65 @@ class SocketAddress {
       return socklen_t(len - offsetof(struct sockaddr_un, sun_path));
     }
 
-    void init() {
+    ExternalUnixAddr() {
       addr = new struct sockaddr_un;
       addr->sun_family = AF_UNIX;
       len = 0;
     }
-    void init(const ExternalUnixAddr& other) {
-      addr = new struct sockaddr_un;
+
+    ExternalUnixAddr(const ExternalUnixAddr& other) : ExternalUnixAddr() {
       len = other.len;
       memcpy(addr, other.addr, size_t(len));
     }
-    void copy(const ExternalUnixAddr& other) {
-      len = other.len;
-      memcpy(addr, other.addr, size_t(len));
+
+    ExternalUnixAddr& operator=(const ExternalUnixAddr& other) {
+      if (this != &other) {
+        len = other.len;
+        memcpy(addr, other.addr, size_t(len));
+      }
+      return *this;
     }
-    void free() { delete addr; }
+
+    ~ExternalUnixAddr() { delete addr; }
   };
+
+  /**
+   * This class stores an IP address and port.
+   */
+  struct IPAddr {
+    folly::IPAddress ip;
+    uint16_t port;
+
+    IPAddr() : ip(), port(0) {}
+    IPAddr(const folly::IPAddress& ip_, uint16_t port_)
+        : ip(ip_), port(port_) {}
+  };
+
+  /**
+   * This class stores the CID (Context Identifier) and port for VSOCK
+   * addresses.
+   */
+  struct VsockAddr {
+    uint32_t cid;
+    uint32_t port;
+
+    explicit VsockAddr(uint32_t cid_) : cid(cid_), port(0) {}
+    VsockAddr(uint32_t cid_, uint32_t port_) : cid(cid_), port(port_) {}
+
+#if FOLLY_HAVE_VSOCK
+    const char* getMappedName() const;
+#endif
+  };
+
+  bool holdsInet() const { return std::holds_alternative<IPAddr>(storage_); }
+
+  bool holdsUnix() const {
+    return std::holds_alternative<ExternalUnixAddr>(storage_);
+  }
+
+  bool holdsVsock() const {
+    return std::holds_alternative<VsockAddr>(storage_);
+  }
 
   struct addrinfo* getAddrInfo(const char* host, uint16_t port, int flags);
   struct addrinfo* getAddrInfo(const char* host, const char* port, int flags);
@@ -728,21 +797,12 @@ class SocketAddress {
   void updateUnixAddressLength(socklen_t addrlen);
 
   /*
-   * storage_ contains room for a full IPv4 or IPv6 address, so they can be
-   * stored inline without a separate allocation on the heap.
-   *
-   * If we need to store a Unix socket address, ExternalUnixAddr is a shim to
-   * track a struct sockaddr_un allocated separately on the heap.
+   * storage_ contains either an IPAddr, an ExternalUnixAddr, or a VsockAddr.
+   * IPAddr is used for IPv4 and IPv6 addresses.
+   * ExternalUnixAddr is used for Unix domain sockets.
+   * VsockAddr is used for VSOCK addresses.
    */
-  union AddrStorage {
-    folly::IPAddress addr;
-    ExternalUnixAddr un;
-    AddrStorage() : addr() {}
-  } storage_{};
-  // IPAddress class does nto save zone or port, and must be saved here
-  uint16_t port_{0};
-
-  bool external_{false};
+  std::variant<IPAddr, ExternalUnixAddr, VsockAddr> storage_{IPAddr()};
 };
 
 /**

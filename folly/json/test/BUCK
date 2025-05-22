@@ -1,9 +1,11 @@
-load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs/dirsync:fb_dirsync_cpp_benchmark.bzl", "fb_dirsync_cpp_benchmark")
+load("@fbsource//tools/build_defs/dirsync:fb_dirsync_cpp_unittest.bzl", "fb_dirsync_cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_benchmark(
+fb_dirsync_cpp_benchmark(
     name = "dynamic_benchmark",
     srcs = ["DynamicBenchmark.cpp"],
     deps = [
@@ -13,7 +15,7 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fb_dirsync_cpp_unittest(
     name = "dynamic_converter_test",
     srcs = ["DynamicConverterTest.cpp"],
     headers = [],
@@ -26,7 +28,7 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fb_dirsync_cpp_unittest(
     name = "dynamic_other_test",
     srcs = ["DynamicOtherTest.cpp"],
     headers = [],
@@ -38,7 +40,7 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fb_dirsync_cpp_unittest(
     name = "dynamic_test",
     srcs = ["DynamicTest.cpp"],
     headers = [],
@@ -54,7 +56,7 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fb_dirsync_cpp_benchmark(
     name = "json_benchmark",
     srcs = ["JsonBenchmark.cpp"],
     headers = [],
@@ -64,7 +66,7 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fb_dirsync_cpp_unittest(
     name = "json_other_test",
     srcs = ["JsonOtherTest.cpp"],
     headers = [],
@@ -74,7 +76,7 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fb_dirsync_cpp_unittest(
     name = "json_patch_test",
     srcs = ["json_patch_test.cpp"],
     headers = [],
@@ -87,7 +89,7 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fb_dirsync_cpp_unittest(
     name = "json_test",
     srcs = ["JsonTest.cpp"],
     headers = [],
@@ -97,7 +99,7 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fb_dirsync_cpp_unittest(
     name = "json_pointer_test",
     srcs = ["json_pointer_test.cpp"],
     headers = [],
@@ -108,7 +110,9 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+# Doesn't work in xplat right now
+fbcode_target(
+    _kind = cpp_unittest,
     name = "json_schema_test",
     srcs = ["JSONSchemaTest.cpp"],
     headers = [],
@@ -119,7 +123,7 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fb_dirsync_cpp_unittest(
     name = "dynamic_parser_test",
     srcs = ["DynamicParserTest.cpp"],
     headers = [],
@@ -131,7 +135,7 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fb_dirsync_cpp_unittest(
     name = "json_test_util_test",
     srcs = ["JsonTestUtilTest.cpp"],
     headers = [],

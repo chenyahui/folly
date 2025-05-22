@@ -53,13 +53,17 @@ class Core : public std::enable_shared_from_this<Core> {
   using WeakPtr = std::weak_ptr<Core>;
 
   struct CreatorContext {
+    // type info for the creator function
     const std::type_info* typeInfo;
+    // type info for the return type of the creator function
+    const std::type_info* invokeResultTypeInfo;
     std::string name;
 
     template <typename F>
     static CreatorContext create(const F& creator) {
       CreatorContext context;
       context.typeInfo = &typeid(F);
+      context.invokeResultTypeInfo = &typeid(std::invoke_result_t<F>);
       if constexpr (Has_getNameT_v<F>) {
         context.name = creator.getName();
       }
@@ -74,16 +78,19 @@ class Core : public std::enable_shared_from_this<Core> {
       CreatorContext creatorContext);
 
   /**
-   * View of the observed object and its version
+   * View of the observed object as well as its version and created time
    */
   struct VersionedData {
+    using TimePoint = std::chrono::system_clock::time_point;
+
     VersionedData() {}
 
-    VersionedData(std::shared_ptr<const void> dat, size_t ver)
-        : data(std::move(dat)), version(ver) {}
+    VersionedData(std::shared_ptr<const void> dat, size_t ver, TimePoint timeC)
+        : data(std::move(dat)), version(ver), timeCreated(timeC) {}
 
     std::shared_ptr<const void> data;
     size_t version{0};
+    TimePoint timeCreated;
   };
 
   /**

@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "avx512_crc32c_v8s3x4",
     srcs = [
         "avx512_crc32c_v8s3x4.cpp",
@@ -22,7 +24,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "sse_crc32c_v8s3x3",
     srcs = [
         "sse_crc32c_v8s3x3.cpp",
@@ -35,7 +38,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "neon_crc32c_v3s4x2e_v2",
     srcs = [
         "neon_crc32c_v3s4x2e_v2.cpp",
@@ -54,7 +58,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "neon_eor3_crc32c_v8s2x4_s3",
     srcs = [
         "neon_eor3_crc32c_v8s2x4_s3.cpp",
@@ -62,11 +67,21 @@ cpp_library(
     headers = [
         "neon_eor3_crc32c_v8s2x4_s3.h",
     ],
-    arch_preprocessor_flags = {
-        "aarch64": [
-            "-march=armv8.2-a+crypto+crc+sha3",
-        ],
-    },
+    deps = [
+        "//folly:portability",
+        "//folly/system:aux_vector",
+    ],
+)
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "neon_eor3_crc32_v9s3x2e_s3",
+    srcs = [
+        "neon_eor3_crc32_v9s3x2e_s3.cpp",
+    ],
+    headers = [
+        "neon_eor3_crc32_v9s3x2e_s3.h",
+    ],
     deps = [
         "//folly:portability",
         "//folly/system:aux_vector",

@@ -16,9 +16,9 @@
 
 #include <folly/detail/StaticSingletonManager.h>
 
-#include <map>
 #include <mutex>
 #include <typeindex>
+#include <unordered_map>
 
 #include <folly/memory/ReentrantAllocator.h>
 
@@ -67,7 +67,7 @@ class StaticSingletonManagerWithRttiImpl {
       if (auto const v = ptr.load(std::memory_order_acquire)) {
         return v;
       }
-      std::unique_lock<std::mutex> lock(mutex);
+      std::unique_lock lock(mutex);
       if (auto const v = ptr.load(std::memory_order_acquire)) {
         return v;
       }
@@ -79,23 +79,30 @@ class StaticSingletonManagerWithRttiImpl {
   };
 
   Entry* get_existing_entry(std::type_info const& key) {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock lock(mutex_);
     auto const it = map_.find(key);
     return it == map_.end() ? nullptr : &it->second;
   }
 
   Entry& create_entry(std::type_info const& key) {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock lock(mutex_);
     return map_[key];
   }
 
-  // using reentrant_allocator to permit new/delete hooks to use this class
-  // using std::map over std::unordered_map to reduce number of mmap regions
-  // since reentrant_allocator creates creates mmap regions to avoid malloc/free
+  // Using reentrant_allocator to permit new/delete hooks to use this class.
+  // std::map would be preferred over std::unordered_map to reduce number of
+  // mmap regions, since reentrant_allocator creates mmap regions to avoid
+  // malloc/free. However, std::map surfaced address sanitizer issues in
+  // std::type_info::before when defining
+  // _LIBCPP_TYPEINFO_COMPARISON_IMPLEMENTATION=2 on Mac builds.
   using map_value_t = std::pair<std::type_index const, Entry>;
-  using map_less_t = std::less<std::type_index>;
   using map_alloc_t = reentrant_allocator<map_value_t>;
-  using map_t = std::map<std::type_index, Entry, map_less_t, map_alloc_t>;
+  using map_t = std::unordered_map<
+      std::type_index,
+      Entry,
+      std::hash<std::type_index>,
+      std::equal_to<std::type_index>,
+      map_alloc_t>;
 
   map_t map_{map_alloc_t{reentrant_allocator_options{}}};
   std::mutex mutex_;

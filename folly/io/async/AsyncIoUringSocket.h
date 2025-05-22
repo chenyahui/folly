@@ -78,6 +78,7 @@ class AsyncIoUringSocket : public AsyncSocketTransport {
       EventBase* evb, NetworkSocket ns, Options&& options = Options{});
 
   static bool supports(EventBase* backend);
+  static bool supportsZcRx(EventBase* backend);
 
   void connect(
       AsyncSocket::ConnectCallback* callback,
@@ -331,6 +332,8 @@ class AsyncIoUringSocket : public AsyncSocketTransport {
     void invalidState(ReadCallback* callback);
     void processOldEventBaseRead();
 
+    bool isEOF(const io_uring_cqe* cqe) noexcept;
+
     IoUringBufferProviderBase* lastUsedBufferProvider_;
     ReadCallback* readCallback_ = nullptr;
     AsyncIoUringSocket* parent_;
@@ -343,6 +346,7 @@ class AsyncIoUringSocket : public AsyncSocketTransport {
     std::unique_ptr<IOBuf> tmpBuffer_;
     bool supportsMultishotRecv_ =
         false; // todo: this can be per process instead of per socket
+    bool supportsZeroCopyRx_ = false;
 
     folly::Optional<folly::SemiFuture<std::unique_ptr<IOBuf>>>
         oldEventBaseRead_;
@@ -351,7 +355,10 @@ class AsyncIoUringSocket : public AsyncSocketTransport {
 
   struct CloseSqe : IoSqeBase {
     explicit CloseSqe(AsyncIoUringSocket* parent)
-        : IoSqeBase(IoSqeBase::Type::Close), parent_(parent) {}
+        : IoSqeBase(IoSqeBase::Type::Close), parent_(parent) {
+      setEventBase(parent->evb_);
+    }
+
     void processSubmit(struct io_uring_sqe* sqe) noexcept override {
       parent_->closeProcessSubmit(sqe);
     }
@@ -417,7 +424,10 @@ class AsyncIoUringSocket : public AsyncSocketTransport {
     explicit ConnectSqe(AsyncIoUringSocket* parent)
         : IoSqeBase(IoSqeBase::Type::Connect),
           AsyncTimeout(parent->evb_),
-          parent_(parent) {}
+          parent_(parent) {
+      setEventBase(parent->evb_);
+    }
+
     void processSubmit(struct io_uring_sqe* sqe) noexcept override {
       parent_->processConnectSubmit(sqe, addrStorage);
     }

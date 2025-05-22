@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "async_base",
     headers = [
         "AsyncBase.h",
@@ -12,7 +14,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "async_io",
     headers = [
         "AsyncIO.h",
@@ -22,7 +25,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "liburing",
     headers = [
         "Liburing.h",
@@ -32,7 +36,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "async_io_uring_socket",
     headers = [
         "AsyncIoUringSocket.h",
@@ -43,7 +48,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "simple_async_io",
     headers = [
         "SimpleAsyncIO.h",
@@ -53,7 +59,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "epoll",
     headers = [
         "Epoll.h",
@@ -63,7 +70,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     # @autodeps-skip
     name = "epoll_backend",
     headers = [
@@ -75,7 +83,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "event_base_poller",
     headers = [
         "EventBasePoller.h",
@@ -85,7 +94,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "mux_io_thread_pool_executor",
     headers = [
         "MuxIOThreadPoolExecutor.h",
@@ -95,7 +105,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "io_uring",
     headers = [
         "IoUring.h",
@@ -105,7 +116,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "io_uring_backend",
     headers = [
         "IoUringBackend.h",
@@ -116,7 +128,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     # @autodeps-skip
     name = "io_uring_provided_buffer_ring",
     headers = [
@@ -128,7 +141,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "io_uring_event",
     headers = [
         "IoUringEvent.h",
@@ -138,7 +152,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "io_uring_event_base_local",
     headers = [
         "IoUringEventBaseLocal.h",
@@ -148,7 +163,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "fs_util",
     headers = [
         "FsUtil.h",
@@ -158,7 +174,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "huge_pages",
     headers = [
         "HugePages.h",

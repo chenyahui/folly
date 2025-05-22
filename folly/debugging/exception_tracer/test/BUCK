@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
@@ -5,7 +6,8 @@ load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "exception_counter_test",
     srcs = ["ExceptionCounterTest.cpp"],
     deps = [
@@ -14,7 +16,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "exception_tracer_benchmark_main",
     srcs = ["ExceptionTracerBenchmark.cpp"],
     deps = [
@@ -27,14 +30,16 @@ cpp_library(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "exception_tracer_base_benchmark",
     deps = [
         ":exception_tracer_benchmark_main",  # @manual
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "exception_tracer_benchmark",
     deps = [
         ":exception_tracer_benchmark_main",  # @manual
@@ -42,7 +47,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "exception_tracer_test_main",
     srcs = ["ExceptionTracerTest.cpp"],
     deps = [
@@ -50,14 +56,16 @@ cpp_library(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "exception_tracer_base_test",
     deps = [
         ":exception_tracer_test_main",  # @manual
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "exception_tracer_test",
     deps = [
         ":exception_tracer_test_main",  # @manual
@@ -65,7 +73,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "smart_exception_tracer_test",
     srcs = ["SmartExceptionTracerTest.cpp"],
     deps = [

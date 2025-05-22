@@ -1,9 +1,11 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "baton_demo",
     srcs = ["synchronization/Baton.cpp"],
     headers = [],
@@ -13,7 +15,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "dynamic_demo",
     srcs = ["dynamic.cpp"],
     headers = [],
@@ -23,7 +26,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "dynamic_converter_demo",
     srcs = ["DynamicConverter.cpp"],
     headers = [],
@@ -33,7 +37,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "executor_guide",
     srcs = ["ExecutorGuide.cpp"],
     headers = [],
@@ -46,7 +51,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "file_demo",
     srcs = ["File.cpp"],
     headers = [],
@@ -56,7 +62,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "format_demo",
     srcs = ["Format.cpp"],
     headers = [],
@@ -66,7 +73,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "likely_demo",
     srcs = ["Likely.cpp"],
     headers = [],
@@ -76,7 +84,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "function_demo",
     srcs = ["Function.cpp"],
     headers = [],
@@ -86,7 +95,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "map_util_demo",
     srcs = ["MapUtil.cpp"],
     headers = [],
@@ -97,7 +107,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "scope_guard2_demo",
     srcs = ["ScopeGuard2.cpp"],
     headers = [],
@@ -108,7 +119,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "scope_guard_demo",
     srcs = ["ScopeGuard.cpp"],
     headers = [],
@@ -119,7 +131,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "synchronized_demo",
     srcs = ["Synchronized.cpp"],
     headers = [],
@@ -129,7 +142,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "ipaddress_demo",
     srcs = ["ipaddress.cpp"],
     headers = [],
@@ -139,7 +153,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "scoped_event_base_thread_demo",
     srcs = ["ScopedEventBaseThread.cpp"],
     headers = [],
@@ -150,7 +165,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "scoped_event_base_thread2_demo",
     srcs = ["ScopedEventBaseThread2.cpp"],
     headers = [],
@@ -164,7 +180,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "cancellation_token_demo",
     srcs = ["CancellationToken.cpp"],
     headers = [],
@@ -174,7 +191,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "cancellation_source_demo",
     srcs = ["CancellationSource.cpp"],
     headers = [],
@@ -184,7 +202,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "cancellation_callback_demo",
     srcs = ["CancellationCallback.cpp"],
     headers = [],

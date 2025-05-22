@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pyre-unsafe
+
 import asyncio
 import unittest
 
 # pyre-fixme[21]: Could not find module `folly.python.test.simplegenerator`.
-from .simplegenerator import SimpleGenerator
+from folly.python.test.simplegenerator import SimpleGenerator
 
 
 class GeneratorTest(unittest.TestCase):

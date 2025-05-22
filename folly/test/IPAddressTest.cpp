@@ -48,7 +48,7 @@ struct AddressData {
       : address(address_), bytes(), version(version_) {}
   explicit AddressData(const std::string& address_)
       : address(address_), bytes(), version(0) {}
-  AddressData() : address(""), bytes(), version(0) {}
+  AddressData() : bytes(), version(0) {}
 
   static in_addr parseAddress4(const std::string& src) {
     in_addr addr;
@@ -1480,8 +1480,8 @@ static vector<AddressFlags> flagProvider = {
     AddressFlags("0:0:0::0", 6, IS_NONROUTABLE | IS_ZERO),
 
     // link-local v6
-    AddressFlags("fe80::0205:73ff:fef9:46fc", 6, IS_LINK_LOCAL),
-    AddressFlags("fe80::0012:34ff:fe56:7890", 6, IS_LINK_LOCAL),
+    AddressFlags("fe80::0205:73ff:fef9:46fc", 6, IS_LINK_LOCAL | IS_PRIVATE),
+    AddressFlags("fe80::0012:34ff:fe56:7890", 6, IS_LINK_LOCAL | IS_PRIVATE),
 
     // multicast v4
     AddressFlags("224.0.0.1", 4, IS_MULTICAST | IS_NONROUTABLE),

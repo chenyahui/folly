@@ -1,9 +1,32 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs:fb_xplat_cxx_binary.bzl", "fb_xplat_cxx_binary")
+load("@fbsource//tools/build_defs:platform_defs.bzl", "CXX", "FBCODE")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+non_fbcode_target(
+    _kind = fb_xplat_cxx_binary,
+    name = "tdigest_benchmark",
+    srcs = ["TDigestBenchmark.cpp"],
+    headers = [],
+    platforms = (CXX, FBCODE),
+    # args = [
+    #     "--json",
+    # ],
+    deps = [
+        "fbsource//xplat/folly:benchmark",
+        "fbsource//xplat/folly:portability_gflags",
+        "fbsource//xplat/folly:stats_digest_builder",
+        "fbsource//xplat/folly:stats_tdigest",
+    ],
+)
+
+# !!!! fbcode/folly/stats/test/TARGETS was merged into this file, see https://fburl.com/workplace/xl8l9yuo for more info !!!!
+
+fbcode_target(
+    _kind = cpp_unittest,
     name = "buffered_stat_test",
     srcs = ["BufferedStatTest.cpp"],
     headers = [],
@@ -14,7 +37,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "digest_builder_benchmark",
     srcs = ["DigestBuilderBenchmark.cpp"],
     headers = [],
@@ -33,7 +57,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "digest_builder_test",
     srcs = ["DigestBuilderTest.cpp"],
     headers = [],
@@ -44,7 +69,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "histogram_benchmark",
     srcs = ["HistogramBenchmark.cpp"],
     headers = [],
@@ -59,7 +85,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "histogram_test",
     srcs = ["HistogramTest.cpp"],
     headers = [],
@@ -69,7 +96,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "streaming_stats_test",
     srcs = ["StreamingStatsTest.cpp"],
     headers = [],
@@ -79,7 +107,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "bucketed_time_series_benchmark",
     srcs = ["BucketedTimeSeriesBenchmark.cpp"],
     headers = [],
@@ -95,7 +124,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "quantile_estimator_benchmark",
     srcs = ["QuantileEstimatorBenchmark.cpp"],
     headers = [],
@@ -109,7 +139,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "quantile_estimator_test",
     srcs = ["QuantileEstimatorTest.cpp"],
     headers = [],
@@ -119,7 +150,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "quantile_histogram_benchmark",
     srcs = ["QuantileHistogramBenchmark.cpp"],
     headers = [],
@@ -133,7 +165,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "quantile_histogram_test",
     srcs = ["QuantileHistogramTest.cpp"],
     headers = [],
@@ -144,7 +177,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "sliding_window_test",
     srcs = ["SlidingWindowTest.cpp"],
     headers = [],
@@ -154,7 +188,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "tdigest_benchmark",
     srcs = ["TDigestBenchmark.cpp"],
     headers = [],
@@ -169,7 +204,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "tdigest_test",
     srcs = ["TDigestTest.cpp"],
     headers = [],
@@ -180,7 +216,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "time_series_test",
     srcs = ["TimeSeriesTest.cpp"],
     headers = [],
@@ -196,7 +233,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "timeseries_histogram_test",
     srcs = ["TimeseriesHistogramTest.cpp"],
     headers = [],

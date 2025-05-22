@@ -14,4 +14,21 @@
  * limitations under the License.
  */
 
-#include <folly/compression/elias_fano/EliasFanoCoding.h>
+#include <gtest/gtest.h>
+#include <folly/python/Weak.h>
+
+TEST(WeakPython, isLinked) {
+  if (folly::python::isLinked()) {
+    EXPECT_TRUE(Py_GetVersion != nullptr);
+    auto version = Py_GetVersion();
+    EXPECT_NE(version, nullptr);
+  } else {
+    EXPECT_TRUE(Py_GetVersion == nullptr);
+  }
+}
+
+TEST(WeakPython, isFinalizing) {
+  // This should always be false, since we never finalize an interperter
+  // And never SEGFAULT
+  EXPECT_EQ(false, folly::python::isLinked() && Py_IsFinalizing());
+}

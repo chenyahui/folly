@@ -33,12 +33,15 @@ class IoUringProvidedBufferRing : public IoUringBufferProviderBase {
     using std::runtime_error::runtime_error;
   };
 
-  IoUringProvidedBufferRing(
-      io_uring* ioRingPtr,
-      uint16_t gid,
-      int count,
-      int bufferShift,
-      int ringSizeShift);
+  struct Options {
+    uint16_t gid{0};
+    size_t count{0};
+    int bufferShift{0};
+    int ringSizeShift{0};
+    bool useHugePages{false};
+  };
+
+  IoUringProvidedBufferRing(io_uring* ioRingPtr, Options options);
 
   void enobuf() noexcept override;
   void unusedBuf(uint16_t i) noexcept override;
@@ -69,7 +72,7 @@ class IoUringProvidedBufferRing : public IoUringBufferProviderBase {
   class ProvidedBuffersBuffer {
    public:
     ProvidedBuffersBuffer(
-        int count, int bufferShift, int ringCountShift, bool huge_pages);
+        size_t count, int bufferShift, int ringCountShift, bool huge_pages);
     ~ProvidedBuffersBuffer() { ::munmap(buffer_, allSize_); }
 
     static size_t calcBufferSize(int bufferShift) {
@@ -106,10 +109,9 @@ class IoUringProvidedBufferRing : public IoUringBufferProviderBase {
     char* bufferBuffer_;
     uint32_t bufferCount_;
 
-    // static constexpr
-    static constexpr size_t kHugePageMask = (1LLU << 21) - 1; // 2MB
-    static constexpr size_t kPageMask = (1LLU << 12) - 1; // 4095
-    static constexpr size_t kBufferAlignMask{31LLU};
+    static constexpr size_t kHugePageSizeBytes = 1024 * 1024 * 2;
+    static constexpr size_t kPageSizeBytes = 4096;
+    static constexpr size_t kBufferAlignBytes = 32;
   };
 
   io_uring* ioRingPtr_;

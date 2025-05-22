@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
@@ -5,7 +6,8 @@ oncall("fbcode_entropy_wardens_folly")
 # "logging" is the core of the logging library
 # If you want to log messages from your code, this is the library you should
 # depend on.
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "logging",
     srcs = [
         "AsyncFileWriter.cpp",
@@ -97,7 +99,8 @@ cpp_library(
 # "init" contains code needed to configure the logging library.
 # The main initialization code in your program should normally depend
 # on this to initialize the logging library.
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "init",
     srcs = [
         "Init.cpp",
@@ -122,7 +125,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "init_weak",
     srcs = [
         "InitWeak.cpp",
@@ -132,7 +136,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "file_handler_factory",
     srcs = ["FileHandlerFactory.cpp"],
     headers = ["FileHandlerFactory.h"],
@@ -144,7 +149,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "log_handler",
     srcs = [
         "LogHandlerConfig.cpp",
@@ -165,7 +171,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "log_level",
     srcs = ["LogLevel.cpp"],
     headers = ["LogLevel.h"],
@@ -178,7 +185,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "log_name",
     srcs = ["LogName.cpp"],
     headers = ["LogName.h"],
@@ -187,7 +195,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "rate_limiter",
     srcs = ["RateLimiter.cpp"],
     headers = ["RateLimiter.h"],
@@ -196,7 +205,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "glog_bridge",
     srcs = ["BridgeFromGoogleLogging.cpp"],
     headers = ["BridgeFromGoogleLogging.h"],
@@ -207,7 +217,8 @@ cpp_library(
     exported_external_deps = ["glog"],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "auto_timer",
     headers = ["AutoTimer.h"],
     exported_deps = [

@@ -1,8 +1,470 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load(
+    "@fbsource//xplat/folly:defs.bzl",
+    "FBANDROID_CPPFLAGS",
+    "folly_xplat_library",
+)
+load("@fbsource//xplat/pfh/triage_InfrastructureSupermoduleOptou:DEFS.bzl", "triage_InfrastructureSupermoduleOptou")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "f14_hash",
+    fbandroid_exported_preprocessor_flags = FBANDROID_CPPFLAGS,
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "F14Map.h",
+        "F14Set.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:traits",
+        "//xplat/folly/container:f14_hash_fwd",
+        "//xplat/folly/container:view",
+        "//xplat/folly/container/detail:f14_hash_detail",
+        "//xplat/folly/container/detail:util",
+        "//xplat/folly/lang:exception",
+        "//xplat/folly/lang:safe_assert",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "heterogeneous_access",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "HeterogeneousAccess.h",
+    ],
+    deps = [
+        "//xplat/folly:hash_hash",
+        "//xplat/folly:range",
+        "//xplat/folly:traits",
+        "//xplat/folly/container:heterogeneous_access_fwd",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "heterogeneous_access_fwd",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "HeterogeneousAccess-fwd.h",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "enumerate",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Enumerate.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:c_portability",
+        "//xplat/folly:portability_sys_types",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "sparse_byte_set",
+    compiler_flags = [
+        "-fno-omit-frame-pointer",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "SparseByteSet.h",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "merge",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Merge.h",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "evicting_cache_map",
+    compiler_flags = [
+        "-fno-omit-frame-pointer",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "EvictingCacheMap.h",
+    ],
+    exported_deps = [
+        "//third-party/boost:boost",
+        "//xplat/folly/container:f14_hash",
+        "//xplat/folly/container:heterogeneous_access",
+        "//xplat/folly/lang:exception",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "weighted_evicting_cache_map",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "WeightedEvictingCacheMap.h",
+    ],
+    exported_deps = [
+        ":evicting_cache_map",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "view",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "View.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly:portability",
+        "//xplat/folly/lang:customization_point",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "foreach",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Foreach.h",
+        "Foreach-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly:portability",
+        "//xplat/folly:preprocessor",
+        "//xplat/folly:traits",
+        "//xplat/folly:utility",
+        "//xplat/folly/container:access",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "f14_hash_fwd",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "F14Map-fwd.h",
+        "F14Set-fwd.h",
+    ],
+    deps = [
+        "//xplat/folly/container/detail:f14_defaults",
+        "//xplat/folly/memory:memory_resource",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "iterator",
+    compiler_flags = [
+        "-fno-omit-frame-pointer",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Iterator.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly:traits",
+        "//xplat/folly:utility",
+        "//xplat/folly/container:access",
+        "//xplat/folly/lang:rvalue_reference_wrapper",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "bit_iterator",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "BitIterator.h",
+    ],
+    exported_deps = [
+        "//third-party/boost:boost",
+        "//xplat/folly:portability",
+        "//xplat/folly/container/detail:bit_iterator_detail",
+        "//xplat/folly/lang:bits",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "array",
+    compiler_flags = [
+        "-fno-omit-frame-pointer",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Array.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:c_portability",
+        "//xplat/folly:traits",
+        "//xplat/folly:utility",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "heap_vector_types",
+    compiler_flags = [
+        "-fno-omit-frame-pointer",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "heap_vector_types.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly:portability_builtins",
+        "//xplat/folly:range",
+        "//xplat/folly:scope_guard",
+        "//xplat/folly:traits",
+        "//xplat/folly:utility",
+        "//xplat/folly/container:iterator",
+        "//xplat/folly/lang:exception",
+        "//xplat/folly/memory:memory_resource",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "access",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Access.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:functional_invoke",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "intrusive_heap",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "IntrusiveHeap.h",
+    ],
+    exported_deps = [
+        "//third-party/boost:boost",
+        "//third-party/glog:glog",
+        "//xplat/folly:portability",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "range_traits",
+    raw_headers = ["range_traits.h"],
+    exported_deps = [
+        "//xplat/folly:traits",
+        "//xplat/folly:utility",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "regex_match_cache",
+    srcs = ["RegexMatchCache.cpp"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["RegexMatchCache.h"],
+    deps = [
+        "//third-party/boost:boost_regex",
+        "//third-party/fmt:fmt",
+        "//third-party/glog:glog",
+        "//xplat/folly:map_util",
+        "//xplat/folly:portability_windows",
+        "//xplat/folly:string",
+        "//xplat/folly:synchronization_atomic_util",
+        "//xplat/folly/ssl:openssl_hash",
+    ],
+    exported_deps = [
+        ":f14_hash",
+        ":reserve",
+        ":span",
+        "//xplat/folly:chrono",
+        "//xplat/folly:fbstring",
+        "//xplat/folly:function",
+        "//xplat/folly/lang:bits",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "span",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["span.h"],
+    exported_deps = [
+        "//xplat/folly:cpp_attributes",
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly:portability",
+        "//xplat/folly:portability_constexpr",
+        "//xplat/folly:traits",
+        "//xplat/folly:utility",
+        "//xplat/folly/container:access",
+        "//xplat/folly/container:iterator",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "tape",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "tape.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:portability",
+        "//xplat/folly:range",
+        "//xplat/folly/container:iterator",
+        "//xplat/folly/container/detail:tape_detail",
+        "//xplat/folly/memory:uninitialized_memory_hacks",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "reserve",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Reserve.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:likely",
+        "//xplat/folly:traits",
+        "//xplat/folly:utility",
+        "//xplat/folly/lang:exception",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "sorted_vector_types",
+    compiler_flags = [
+        "-fno-omit-frame-pointer",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["sorted_vector_types.h"],
+    exported_deps = [
+        "//xplat/folly:scope_guard",
+        "//xplat/folly:small_vector",
+        "//xplat/folly:traits",
+        "//xplat/folly:utility",
+        "//xplat/folly/lang:access",
+        "//xplat/folly/lang:exception",
+        "//xplat/folly/memory:memory_resource",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "fbvector",
+    compiler_flags = [
+        "-fno-omit-frame-pointer",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "FBVector.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:format_traits",
+        "//xplat/folly:likely",
+        "//xplat/folly:scope_guard",
+        "//xplat/folly:traits",
+        "//xplat/folly/lang:checked_math",
+        "//xplat/folly/lang:exception",
+        "//xplat/folly/lang:hint",
+        "//xplat/folly/memory:malloc",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "intrusive_list",
+    compiler_flags = [
+        "-fno-omit-frame-pointer",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "IntrusiveList.h",
+    ],
+    exported_deps = [
+        "//third-party/boost:boost",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "map_util",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "MapUtil.h",
+    ],
+    exported_deps = [
+        "fbsource//third-party/fmt:fmt",
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly:optional",
+        "//xplat/folly:range",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "small_vector",
+    compiler_flags = [
+        "-fno-omit-frame-pointer",
+    ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "small_vector.h",
+    ],
+    exported_deps = [
+        "//third-party/boost:boost",
+        "//xplat/folly:constexpr_math",
+        "//xplat/folly:format_traits",
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly:hash_hash",
+        "//xplat/folly:likely",
+        "//xplat/folly:portability",
+        "//xplat/folly:portability_malloc",
+        "//xplat/folly:scope_guard",
+        "//xplat/folly:traits",
+        "//xplat/folly/lang:align",
+        "//xplat/folly/lang:assume",
+        "//xplat/folly/lang:checked_math",
+        "//xplat/folly/lang:exception",
+        "//xplat/folly/memory:malloc",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "vector_bool",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "vector_bool.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/container/detail:bool_wrapper",
+        "//xplat/folly/memory:memory_resource",
+    ],
+)
+
+# !!!! fbcode/folly/container/TARGETS was merged into this file, see https://fburl.com/workplace/xl8l9yuo for more info !!!!
+
+fbcode_target(
+    _kind = cpp_library,
     name = "access",
     headers = ["Access.h"],
     exported_deps = [
@@ -10,7 +472,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "array",
     headers = ["Array.h"],
     exported_deps = [
@@ -20,7 +483,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "bit_iterator",
     headers = ["BitIterator.h"],
     exported_deps = [
@@ -33,7 +497,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "iterator",
     headers = ["Iterator.h"],
     exported_deps = [
@@ -45,7 +510,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "enumerate",
     headers = ["Enumerate.h"],
     exported_deps = [
@@ -54,7 +520,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "evicting_cache_map",
     headers = ["EvictingCacheMap.h"],
     exported_deps = [
@@ -67,7 +534,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "f14_hash",
     headers = [
         "F14Map.h",
@@ -87,7 +555,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "f14_hash_fwd",
     headers = [
         "F14Map-fwd.h",
@@ -99,7 +568,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "heap_vector_types",
     headers = [
         "heap_vector_types.h",
@@ -118,7 +588,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "foreach",
     headers = [
         "Foreach.h",
@@ -134,14 +605,16 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "heterogeneous_access_fwd",
     headers = [
         "HeterogeneousAccess-fwd.h",
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "heterogeneous_access",
     headers = [
         "HeterogeneousAccess.h",
@@ -154,12 +627,14 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "merge",
     headers = ["Merge.h"],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "range_traits",
     headers = ["range_traits.h"],
     exported_deps = [
@@ -168,7 +643,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "regex_match_cache",
     srcs = ["RegexMatchCache.cpp"],
     headers = ["RegexMatchCache.h"],
@@ -194,7 +670,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "span",
     headers = ["span.h"],
     exported_deps = [
@@ -209,7 +686,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "sparse_byte_set",
     headers = ["SparseByteSet.h"],
     exported_deps = [
@@ -217,7 +695,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "tape",
     headers = [
         "tape.h",
@@ -231,7 +710,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "view",
     headers = ["View.h"],
     exported_deps = [
@@ -241,7 +721,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "weighted_evicting_cache_map",
     headers = [
         "WeightedEvictingCacheMap.h",
@@ -251,7 +732,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "intrusive_heap",
     headers = [
         "IntrusiveHeap.h",
@@ -265,7 +747,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "reserve",
     headers = [
         "Reserve.h",
@@ -278,13 +761,15 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "sorted_vector_types",
     headers = [
         "sorted_vector_types.h",
     ],
     exported_deps = [
         "//folly:scope_guard",
+        "//folly:small_vector",
         "//folly:traits",
         "//folly:utility",
         "//folly/lang:access",
@@ -293,7 +778,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "fbvector",
     headers = ["FBVector.h"],
     exported_deps = [
@@ -308,7 +794,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "intrusive_list",
     headers = ["IntrusiveList.h"],
     exported_external_deps = [
@@ -316,7 +803,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "map_util",
     headers = ["MapUtil.h"],
     exported_deps = [
@@ -327,7 +815,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "small_vector",
     headers = ["small_vector.h"],
     exported_deps = [
@@ -349,5 +838,15 @@ cpp_library(
     ],
     exported_external_deps = [
         "boost",
+    ],
+)
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "vector_bool",
+    headers = ["vector_bool.h"],
+    exported_deps = [
+        "//folly/container/detail:bool_wrapper",
+        "//folly/memory:memory_resource",
     ],
 )

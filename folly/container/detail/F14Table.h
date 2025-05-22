@@ -50,6 +50,11 @@
 #include <folly/container/detail/F14IntrinsicsAvailability.h>
 #include <folly/container/detail/F14Mask.h>
 
+#if FOLLY_ARM_FEATURE_NEON_SVE_BRIDGE
+#include <arm_neon_sve_bridge.h>
+#include <arm_sve.h>
+#endif
+
 #if __has_include(<concepts>)
 #include <concepts>
 #endif
@@ -233,7 +238,7 @@ class F14HashToken final {
   template <typename Policy>
   friend class f14::detail::F14Table;
 
-  template <typename Key, typename Hasher>
+  template <typename Key, typename Hasher, typename KeyEqual>
   friend class F14HashedKey;
 };
 
@@ -410,14 +415,42 @@ std::pair<std::size_t, std::size_t> splitHashImpl(std::size_t hash) {
 } // namespace detail
 } // namespace f14
 
-template <typename TKeyType, typename Hasher = f14::DefaultHasher<TKeyType>>
+template <
+    typename TKeyType,
+    typename Hasher = f14::DefaultHasher<TKeyType>,
+    typename KeyEqual = f14::DefaultKeyEqual<TKeyType>>
 class F14HashedKey final {
+ private:
+  template <typename K>
+  using EligibleForHeterogeneousCompare =
+      detail::EligibleForHeterogeneousFind<TKeyType, Hasher, KeyEqual, K>;
+
+  template <typename K, typename T>
+  using EnableHeterogeneousCompare =
+      std::enable_if_t<EligibleForHeterogeneousCompare<K>::value, T>;
+
+  static constexpr void checkTemplateParamContract() {
+    static_assert(is_constexpr_default_constructible_v<Hasher>);
+    static_assert(is_constexpr_default_constructible_v<KeyEqual>);
+    static_assert(std::is_trivially_copyable_v<Hasher>);
+    static_assert(std::is_trivially_copyable_v<KeyEqual>);
+    static_assert(std::is_empty_v<Hasher>);
+    static_assert(std::is_empty_v<KeyEqual>);
+    // When `Hasher` or `KeyEqual` is not transparent, `F14HashedKey` will
+    // behave like `TKeyType` without any performance effect, it is most likely
+    // not what is expected.
+    static_assert(is_transparent_v<Hasher>);
+    static_assert(is_transparent_v<KeyEqual>);
+  }
+
  public:
 #if FOLLY_F14_VECTOR_INTRINSICS_AVAILABLE
   template <typename... Args>
   explicit F14HashedKey(Args&&... args)
       : key_(std::forward<Args>(args)...),
-        hash_(f14::detail::splitHashImpl<Hasher, TKeyType>(Hasher{}(key_))) {}
+        hash_(f14::detail::splitHashImpl<Hasher, TKeyType>(Hasher{}(key_))) {
+    checkTemplateParamContract();
+  }
 #else
   F14HashedKey() = delete;
 #endif
@@ -429,10 +462,58 @@ class F14HashedKey final {
   /* implicit */ operator const TKeyType&() const { return key_; }
   explicit operator const F14HashToken&() const { return hash_; }
 
-  bool operator==(const F14HashedKey& other) const {
-    return key_ == other.key_;
+  template <typename T>
+  using IsRangeConvertible =
+      std::enable_if_t<detail::TransparentlyConvertibleToRange<T>::value>;
+
+  template <typename T>
+  using RangeT =
+      Range<typename detail::ValueTypeForTransparentConversionToRange<
+          T>::type const*>;
+
+  template <typename K = TKeyType, typename Enable = IsRangeConvertible<K>>
+  constexpr explicit operator RangeT<K>() const {
+    return key_;
   }
-  bool operator==(const TKeyType& other) const { return key_ == other; }
+
+  friend bool operator==(const F14HashedKey& a, const F14HashedKey& b) {
+    return KeyEqual{}(a.key_, b.key_);
+  }
+  friend bool operator!=(const F14HashedKey& a, const F14HashedKey& b) {
+    return !(a == b);
+  }
+  friend bool operator==(const F14HashedKey& a, const TKeyType& b) {
+    return KeyEqual{}(a.key_, b);
+  }
+  friend bool operator!=(const F14HashedKey& a, const TKeyType& b) {
+    return !(a == b);
+  }
+  friend bool operator==(const TKeyType& a, const F14HashedKey& b) {
+    return KeyEqual{}(a, b.key_);
+  }
+  friend bool operator!=(const TKeyType& a, const F14HashedKey& b) {
+    return !(a == b);
+  }
+  template <typename K>
+  friend EnableHeterogeneousCompare<K, bool> operator==(
+      const F14HashedKey& a, const K& b) {
+    return KeyEqual{}(a.key_, b);
+  }
+  template <typename K>
+  friend EnableHeterogeneousCompare<K, bool> operator!=(
+      const F14HashedKey& a, const K& b) {
+    return !(a == b);
+  }
+  template <typename K>
+  friend EnableHeterogeneousCompare<K, bool> operator==(
+      const K& a, const F14HashedKey& b) {
+    return KeyEqual{}(a, b.key_);
+  }
+  template <typename K>
+  friend EnableHeterogeneousCompare<K, bool> operator!=(
+      const K& a, const F14HashedKey& b) {
+    return !(a == b);
+  }
 
  private:
   TKeyType key_;
@@ -645,8 +726,26 @@ struct alignas(kRequiredVectorAlignment) F14Chunk {
   }
 
 #if FOLLY_NEON
+
   ////////
-  // Tag filtering using NEON intrinsics
+  // Tag filtering using NEON/SVE intrinsics
+
+#if FOLLY_ARM_FEATURE_NEON_SVE_BRIDGE
+
+  SparseMaskIter tagMatchIter(uint8x16_t needleV, svbool_t pred) const {
+    svuint8_t tagV = svld1_u8(pred, &tags_[0]);
+    auto eqV =
+        svset_neonq_u8(svundef_u8(), vceqq_u8(svget_neonq(tagV), needleV));
+    // preserve only bits 0 and 4 of each byte
+    eqV = svand_n_u8_x(pred, eqV, 17);
+    // get info from every byte into the bottom half of every uint16_t
+    // by shifting right 4, then round to get it into a 64-bit vector
+    uint8x8_t maskV = vshrn_n_u16(vreinterpretq_u16_u8(svget_neonq(eqV)), 4);
+    uint64_t mask = vreinterpret_u64_u8(maskV)[0];
+    return SparseMaskIter(mask);
+  }
+
+#else
 
   SparseMaskIter tagMatchIter(uint8x16_t needleV) const {
     uint8x16_t tagV = vld1q_u8(&tags_[0]);
@@ -657,6 +756,8 @@ struct alignas(kRequiredVectorAlignment) F14Chunk {
     uint64_t mask = vget_lane_u64(vreinterpret_u64_u8(maskV), 0) & kFullMask;
     return SparseMaskIter(mask);
   }
+
+#endif
 
   MaskType occupiedMask() const {
     uint8x16_t tagV = vld1q_u8(&tags_[0]);
@@ -1556,8 +1657,6 @@ class F14Table : public Policy {
 
   std::size_t probeDelta(HashPair hp) const { return 2 * hp.second + 1; }
 
-#if FOLLY_NEON
-
   // TRICKY!  It may seem strange to have a std::size_t needle and narrow
   // it at the last moment, rather than making HashPair::second be a
   // uint8_t, but the latter choice sometimes leads to a performance
@@ -1575,18 +1674,15 @@ class F14Table : public Policy {
   // a microbenchmark).  Keeping needle >= 4 bytes avoids the problem
   // and also happens to result in slightly more compact assembly.
 
-  FOLLY_ALWAYS_INLINE uint8x16_t loadNeedleV(std::size_t needle) const {
+  FOLLY_ALWAYS_INLINE auto loadNeedleV(std::size_t needle) const {
+#if FOLLY_NEON
     return vdupq_n_u8(static_cast<uint8_t>(needle));
-  }
 #elif FOLLY_SSE >= 2
-  FOLLY_ALWAYS_INLINE __m128i loadNeedleV(std::size_t needle) const {
     return _mm_set1_epi8(static_cast<uint8_t>(needle));
-  }
 #else
-  FOLLY_ALWAYS_INLINE std::size_t loadNeedleV(std::size_t needle) const {
     return needle;
-  }
 #endif
+  }
 
   enum class Prefetch { DISABLED, ENABLED };
 
@@ -1594,15 +1690,22 @@ class F14Table : public Policy {
   FOLLY_ALWAYS_INLINE ItemIter
   findImpl(HashPair hp, K const& key, Prefetch prefetch) const {
     FOLLY_SAFE_DCHECK(hp.second >= 0x80 && hp.second < 0x100, "");
+#if FOLLY_ARM_FEATURE_NEON_SVE_BRIDGE
+    svbool_t pred = svwhilelt_b8_u32(0, chunks_->kCapacity);
+#endif
     std::size_t index = hp.first;
     std::size_t step = probeDelta(hp);
     auto needleV = loadNeedleV(hp.second);
-    for (std::size_t tries = 0; tries >> chunkShift() == 0; ++tries) {
+    for (std::size_t tries = chunkCount(); tries > 0;) {
       ChunkPtr chunk = chunks_ + moduloByChunkCount(index);
       if (prefetch == Prefetch::ENABLED && sizeof(Chunk) > 64) {
         prefetchAddr(chunk->itemAddr(8));
       }
+#if FOLLY_ARM_FEATURE_NEON_SVE_BRIDGE
+      auto hits = chunk->tagMatchIter(needleV, pred);
+#else
       auto hits = chunk->tagMatchIter(needleV);
+#endif
       while (hits.hasNext()) {
         auto i = hits.next();
         if (FOLLY_LIKELY(this->keyMatchesItem(key, chunk->item(i)))) {
@@ -1617,6 +1720,7 @@ class F14Table : public Policy {
         // entry, so our search is over.  This is the common case.
         break;
       }
+      --tries;
       index += step;
     }
     // Loop exit because tries is exhausted is rare, but possible.
@@ -1624,6 +1728,19 @@ class F14Table : public Policy {
     // in the map that visited that chunk on its probe search but ended
     // up somewhere else, and we have searched every chunk.
     return ItemIter{};
+  }
+
+  template <typename K>
+  HashPair computeHash(K const& key) const {
+    return splitHash(this->computeKeyHash(key));
+  }
+
+  template <typename HKKey, typename HKHasher, typename HKEqual>
+  HashPair computeHash(
+      F14HashedKey<HKKey, HKHasher, HKEqual> const& hashedKey) const {
+    static_assert(std::is_same_v<HKHasher, Hasher>);
+    static_assert(std::is_same_v<HKEqual, KeyEqual>);
+    return static_cast<HashPair>(hashedKey.getHashToken());
   }
 
  public:
@@ -1634,7 +1751,7 @@ class F14Table : public Policy {
   // search.
   template <typename K>
   F14HashToken prehash(K const& key) const {
-    return F14HashToken{splitHash(this->computeKeyHash(key))};
+    return F14HashToken{computeHash(key)};
   }
 
   template <typename K>
@@ -1651,16 +1768,14 @@ class F14Table : public Policy {
 
   template <typename K>
   FOLLY_ALWAYS_INLINE ItemIter find(K const& key) const {
-    auto hp = splitHash(this->computeKeyHash(key));
+    auto hp = computeHash(key);
     return findImpl(hp, key, Prefetch::ENABLED);
   }
 
   template <typename K>
   FOLLY_ALWAYS_INLINE ItemIter
   find(F14HashToken const& token, K const& key) const {
-    FOLLY_SAFE_DCHECK(
-        splitHash(this->computeKeyHash(key)) == static_cast<HashPair>(token),
-        "");
+    FOLLY_SAFE_DCHECK(computeHash(key) == static_cast<HashPair>(token), "");
     return findImpl(static_cast<HashPair>(token), key, Prefetch::DISABLED);
   }
 
@@ -1670,16 +1785,23 @@ class F14Table : public Policy {
   // constraints.
   template <typename K, typename F>
   FOLLY_ALWAYS_INLINE ItemIter findMatching(K const& key, F&& func) const {
-    auto hp = splitHash(this->computeKeyHash(key));
+    auto hp = computeHash(key);
+#if FOLLY_ARM_FEATURE_NEON_SVE_BRIDGE
+    svbool_t pred = svwhilelt_b8_u32(0, chunks_->kCapacity);
+#endif
     std::size_t index = hp.first;
     auto needleV = loadNeedleV(hp.second);
     std::size_t step = probeDelta(hp);
-    for (std::size_t tries = 0; tries >> chunkShift() == 0; ++tries) {
+    for (std::size_t tries = chunkCount(); tries > 0; --tries) {
       ChunkPtr chunk = chunks_ + moduloByChunkCount(index);
       if (sizeof(Chunk) > 64) {
         prefetchAddr(chunk->itemAddr(8));
       }
+#if FOLLY_ARM_FEATURE_NEON_SVE_BRIDGE
+      auto hits = chunk->tagMatchIter(needleV, pred);
+#else
       auto hits = chunk->tagMatchIter(needleV);
+#endif
       while (hits.hasNext()) {
         auto i = hits.next();
         if (FOLLY_LIKELY(
@@ -1959,7 +2081,7 @@ class F14Table : public Policy {
           auto& srcItem = srcChunk->item(i);
           auto&& srcArg = std::forward<T>(src).buildArgForItem(srcItem);
           auto const& srcKey = src.keyForValue(srcArg);
-          auto hp = splitHash(this->computeKeyHash(srcKey));
+          auto hp = computeHash(srcKey);
           FOLLY_SAFE_CHECK(hp.second == srcChunk->tag(i), "");
           insertAtBlank(
               allocateTag(fullness, hp),
@@ -2336,16 +2458,14 @@ class F14Table : public Policy {
   // from args...  key won't be accessed after args are touched.
   template <typename K, typename... Args>
   std::pair<ItemIter, bool> tryEmplaceValue(K const& key, Args&&... args) {
-    const auto hp = splitHash(this->computeKeyHash(key));
+    const auto hp = computeHash(key);
     return tryEmplaceValueImpl(hp, key, std::forward<Args>(args)...);
   }
 
   template <typename K, typename... Args>
   std::pair<ItemIter, bool> tryEmplaceValueWithToken(
       F14HashToken const& token, K const& key, Args&&... args) {
-    FOLLY_SAFE_DCHECK(
-        splitHash(this->computeKeyHash(key)) == static_cast<HashPair>(token),
-        "");
+    FOLLY_SAFE_DCHECK(computeHash(key) == static_cast<HashPair>(token), "");
     return tryEmplaceValueImpl(
         static_cast<HashPair>(token), key, std::forward<Args>(args)...);
   }
@@ -2485,7 +2605,7 @@ class F14Table : public Policy {
     if (FOLLY_UNLIKELY(size() == 0)) {
       return 0;
     }
-    auto hp = splitHash(this->computeKeyHash(key));
+    auto hp = computeHash(key);
     auto iter = findImpl(hp, key, Prefetch::ENABLED);
     if (!iter.atEnd()) {
       beforeDestroy(this->valueAtItemForExtract(iter.item()));

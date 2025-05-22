@@ -105,7 +105,7 @@ void evSigHandler(int sig) {
 
 void SignalRegistry::notify(int sig) {
   // use try_lock in case somebody already has the lock
-  std::unique_lock<folly::MicroSpinLock> lk(mapLock_, std::try_to_lock);
+  std::unique_lock lk(mapLock_, std::try_to_lock);
   if (lk.owns_lock()) {
     int fd = notifyFd_.load();
     if (fd >= 0) {
@@ -116,7 +116,7 @@ void SignalRegistry::notify(int sig) {
 }
 
 void SignalRegistry::setNotifyFd(int sig, int fd) {
-  std::lock_guard<folly::MicroSpinLock> g(mapLock_);
+  std::lock_guard g(mapLock_);
   if (fd >= 0) {
     if (!map_) {
       map_ = std::make_unique<SignalMap>();
@@ -163,9 +163,6 @@ void checkLogOverflow([[maybe_unused]] struct io_uring* ring) {
 #endif
 }
 
-} // namespace
-
-namespace {
 class SQGroupInfoRegistry {
  private:
   // a group is a collection of io_uring instances
@@ -344,6 +341,19 @@ IoUringBufferProviderBase::UniquePtr makeProvidedBufferRing(Args&&...) {
 
 #endif
 
+bool validateZeroCopyRxOptions(IoUringBackend::Options& options) {
+  if (options.zeroCopyRx &&
+      (options.zcRxIfname.empty() || options.zcRxIfindex <= 0 ||
+       options.zcRxQueueId == -1 || !options.resolveNapiId)) {
+    return false;
+  }
+
+  return true;
+}
+
+// Currently a 4K page size is required.
+constexpr size_t kZeroCopyPageSize = 4096;
+
 } // namespace
 
 IoUringBackend::SocketPair::SocketPair() {
@@ -477,6 +487,9 @@ void IoSqeBase::internalCallback(const io_uring_cqe* cqe) noexcept {
   if (!(cqe->flags & IORING_CQE_F_MORE)) {
     inFlight_ = false;
   }
+  if (evb_) {
+    evb_->bumpHandlingTime();
+  }
   if (cancelled_) {
     callbackCancelled(cqe);
   } else {
@@ -495,23 +508,17 @@ FOLLY_ALWAYS_INLINE void IoUringBackend::setProcessSignals() {
 }
 
 void IoUringBackend::processPollIoSqe(
-    IoUringBackend* backend, IoSqe* ioSqe, int res, uint32_t flags) {
-  backend->processPollIo(ioSqe, res, flags);
+    IoUringBackend* backend, IoSqe* ioSqe, const io_uring_cqe* cqe) {
+  backend->processPollIo(ioSqe, cqe->res, cqe->flags);
 }
 
 void IoUringBackend::processTimerIoSqe(
-    IoUringBackend* backend,
-    IoSqe* /*sqe*/,
-    int /*res*/,
-    uint32_t /* flags */) {
+    IoUringBackend* backend, IoSqe* /*sqe*/, const io_uring_cqe* /*cqe*/) {
   backend->setProcessTimers();
 }
 
 void IoUringBackend::processSignalReadIoSqe(
-    IoUringBackend* backend,
-    IoSqe* /*sqe*/,
-    int /*res*/,
-    uint32_t /* flags */) {
+    IoUringBackend* backend, IoSqe* /*sqe*/, const io_uring_cqe* /*cqe*/) {
   backend->setProcessSignals();
 }
 
@@ -523,6 +530,9 @@ IoUringBackend::IoUringBackend(Options options)
   timerFd_ = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
   if (timerFd_ < 0) {
     throw std::runtime_error("timerfd_create error");
+  }
+  if (!validateZeroCopyRxOptions(options_)) {
+    throw std::runtime_error("invalid zero copy rx options");
   }
 
   ::memset(&ioRing_, 0, sizeof(ioRing_));
@@ -543,6 +553,17 @@ IoUringBackend::IoUringBackend(Options options)
     usingDeferTaskrun_ = true;
   }
 #endif
+
+  if (options_.zeroCopyRx) {
+    params_.flags |= IORING_SETUP_CQE32;
+    params_.flags |= IORING_SETUP_DEFER_TASKRUN;
+    params_.flags |= IORING_SETUP_SINGLE_ISSUER;
+    params_.flags |= IORING_SETUP_R_DISABLED;
+    params_.flags |= IORING_SETUP_COOP_TASKRUN;
+    params_.flags |= IORING_SETUP_SUBMIT_ALL;
+
+    napiId_ = options_.resolveNapiId(options.zcRxIfindex, options.zcRxQueueId);
+  }
 
   // poll SQ options
   if (options.flags & Options::Flags::POLL_SQ) {
@@ -1094,15 +1115,34 @@ void IoUringBackend::initSubmissionLinked() {
         std::max<int>(get_shift(options_.initialProvidedBuffersCount), 1);
 
     try {
-      bufferProvider_ = makeProvidedBufferRing(
-          this->ioRingPtr(),
-          nextBufferProviderGid(),
-          options_.initialProvidedBuffersCount,
-          sizeShift,
-          ringShift);
+      IoUringProvidedBufferRing::Options options = {
+          .gid = nextBufferProviderGid(),
+          .count = options_.initialProvidedBuffersCount,
+          .bufferShift = sizeShift,
+          .ringSizeShift = ringShift,
+          .useHugePages = false,
+      };
+      bufferProvider_ = makeProvidedBufferRing(this->ioRingPtr(), options);
     } catch (const IoUringProvidedBufferRing::LibUringCallError& ex) {
+      LOG(ERROR) << folly::to<std::string>(
+          "failed to make provided buffer ring, buffer count: ",
+          options_.initialProvidedBuffersCount,
+          ", buffer size: ",
+          options_.initialProvidedBuffersEachSize);
       throw NotAvailable(ex.what());
     }
+  }
+
+  if (options_.zeroCopyRx) {
+    IoUringZeroCopyBufferPool::Params params = {
+        .ring = this->ioRingPtr(),
+        .numPages = static_cast<size_t>(options_.zcRxNumPages),
+        .pageSize = kZeroCopyPageSize,
+        .rqEntries = static_cast<uint32_t>(options_.zcRxRefillEntries),
+        .ifindex = static_cast<uint32_t>(options_.zcRxIfindex),
+        .queueId = static_cast<uint16_t>(options_.zcRxQueueId),
+    };
+    zcBufferPool_ = IoUringZeroCopyBufferPool::create(params);
   }
 }
 
@@ -1255,6 +1295,7 @@ int IoUringBackend::eb_event_add(Event& event, const struct timeval* timeout) {
     auto* ioSqe = allocIoSqe(event.getCallback());
     CHECK(ioSqe);
     ioSqe->event_ = &event;
+    ioSqe->setEventBase(event.eb_ev_base());
 
     // just append it
     submitList_.push_back(*ioSqe);
@@ -1853,11 +1894,52 @@ void IoUringBackend::queueRecvmsg(
   submitImmediateIoSqe(*ioSqe);
 }
 
+void IoUringBackend::queueRecvZc(
+    int fd, void* buf, unsigned long nbytes, RecvZcCallback&& cb) {
+  iovec iov = {
+      .iov_base = buf,
+      .iov_len = nbytes,
+  };
+  auto* ioSqe = new RecvzcIoSqe(this, fd, &iov, 0, std::move(cb));
+  ioSqe->backendCb_ = processRecvZcCB;
+
+  submitImmediateIoSqe(*ioSqe);
+}
+
 void IoUringBackend::processFileOp(IoSqe* sqe, int res) noexcept {
   auto* ioSqe = reinterpret_cast<FileOpIoSqe*>(sqe);
   // save the res
   ioSqe->res_ = res;
   activeEvents_.push_back(*ioSqe);
+}
+
+void IoUringBackend::processRecvZc(
+    IoSqe* sqe, const io_uring_cqe* cqe) noexcept {
+  RecvzcIoSqe* ioSqe = reinterpret_cast<RecvzcIoSqe*>(sqe);
+  const io_uring_zcrx_cqe* rcqe = (io_uring_zcrx_cqe*)(cqe + 1);
+
+  auto iov = ioSqe->iov_.data();
+  if (cqe->res == 0 && cqe->flags == 0) {
+    CHECK_EQ(static_cast<size_t>(ioSqe->offset_), iov->iov_len);
+    ioSqe->res_ = cqe->res;
+    ioSqe->cb_(static_cast<int>(iov->iov_len));
+    delete ioSqe;
+    return;
+  }
+
+  if (cqe->res < 0) {
+    ioSqe->res_ = cqe->res;
+    ioSqe->cb_(cqe->res);
+    delete ioSqe;
+    return;
+  }
+
+  auto buf = zcBufferPool_->getIoBuf(cqe, rcqe);
+  ::memcpy(
+      reinterpret_cast<char*>(iov->iov_base) + ioSqe->offset_,
+      buf->data(),
+      buf->length());
+  ioSqe->offset_ += cqe->res;
 }
 
 bool IoUringBackend::kernelHasNonBlockWriteFixes() const {

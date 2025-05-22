@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "socket_file_descriptor_map_test",
     srcs = ["SocketFileDescriptorMapTest.cpp"],
     deps = [

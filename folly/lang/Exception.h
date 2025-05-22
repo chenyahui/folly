@@ -558,13 +558,21 @@ T* exception_ptr_try_get_object_exact_fast(
   return out;
 }
 
+namespace detail {
+template <typename T>
+using detect_folly_get_exception_hint_types =
+    typename std::remove_cv_t<T>::folly_get_exception_hint_types;
+} // namespace detail
+
 /// exception_ptr_get_object_hint
 ///
 /// Returns the address of the stored exception as if it were upcast to the
 /// given type, if it could be upcast to that type.
 ///
 /// If its concrete type is exactly equal to one of the types passed in the tag,
-/// this may be faster than exception_ptr_get_object without the hint.
+/// this may be faster than `exception_ptr_get_object` without the hint.
+///
+/// Prefer the next overload that uses `T::folly_get_exception_hint_types`.
 template <typename T, typename... S>
 T* exception_ptr_get_object_hint(
     std::exception_ptr const& ptr, tag_t<S...> const hint) noexcept {
@@ -572,17 +580,165 @@ T* exception_ptr_get_object_hint(
   return FOLLY_LIKELY(!!val) ? val : exception_ptr_get_object<T>(ptr);
 }
 
+template <typename T>
+T* exception_ptr_get_object_hint(std::exception_ptr const& ptr) noexcept {
+  using hints =
+      detected_or_t<tag_t<T>, detail::detect_folly_get_exception_hint_types, T>;
+  return exception_ptr_get_object_hint<T>(ptr, hints{});
+}
+
+/// get_exception_tag_t
+///
+/// A type that may contain an exception may take this passkey in the following
+/// member functions:
+///   - `get_exception<Ex>(get_exception_tag_t) const` when implementing the
+///     `folly::get_exception<Ex>()` protocol.
+///   - `get_mutable_exception<Ex>(get_exception_tag_t)` when implementing the
+///     `folly::get_mutable_exception<Ex>()` protocol.
+struct get_exception_tag_t {};
+
+/// get_exception_fn
+/// get_exception
+/// get_mutable_exception_fn
+/// get_mutable_exception
+///
+/// `get_exception<Ex>(v)` is meant to become the default way for accessing
+/// exception-containers in `folly`.
+///
+/// For the less-common scenario where you need mutable access to an error, use
+/// `get_mutable_exception<Ex>(v)`.  This is a separate verb because:
+///    - Mutable exception access is rare.  It may run into thread-safety bugs
+///      if a `std::current_exception()` pointer is accessed outside of the
+///      thread that threw it -- the standard permits reference semantics here!
+///    - Making mutable access explicit enables no-alloctions, no-atomics
+///      optimizations for the `const`-access path.
+///
+/// Both verbs return:
+///   - `nullptr` if `v` is of a variant type, but is not in an "error" state,
+///   - A pointer to the `Ex` held by `v`, if it holds an error whose type
+///     `From` permits `std::is_convertible<From*, Ex*>`,
+///   - `nullptr` for errors incompatible with `Ex*`.
+///
+/// In addition to the `std::exception_ptr` support above, a type can support
+/// this verb by providing member functions taking `get_exception_tag_t`.  For
+/// an example, see `ExceptionWrapper.h`.  Requirements:
+///   - `noexcept`
+///   - returns `Ex*` or `const Ex*` depending on the verb.
+///
+/// This is most efficient when `Ex` matches the exact stored type, or when the
+/// type alias `Ex::folly_get_exception_hint_types` provides a correct hint.
+///
+/// NB: `result<T>` supports `get_exception<Ex>(res)`, but `Try<T>` currently
+/// omits `get_exception(get_exception_tag_t)`, because that might encourage
+/// "empty state" bugs:
+///
+///   if (auto* ex = get_exception<MyError>(tryData)) {
+///     // handle error
+///   } else {
+///     doStuff(tryData.value()); // Oops, may throw `UsingUninitializedTry`!
+///   }
+///
+/// The "lifetimebound" attribute provides _some_ use-after-free protection,
+/// see the `#if 0` manual test in `get_exception_from_std_exception_ptr`.
+template <typename Ex>
+class get_exception_fn {
+ public:
+  template <typename Src>
+  const Ex* operator()(
+      [[FOLLY_ATTR_CLANG_LIFETIMEBOUND]] const Src& src) const noexcept {
+    if constexpr (std::is_same_v<Src, std::exception_ptr>) {
+      return exception_ptr_get_object_hint<const Ex>(src);
+    } else {
+      constexpr get_exception_tag_t passkey;
+      static_assert( // Return type & `noexcept`ness must match
+          std::is_same_v<
+              const Ex*,
+              decltype(src.template get_exception<Ex>(passkey))> &&
+          noexcept(noexcept(src.template get_exception<Ex>(passkey))));
+      return src.template get_exception<Ex>(passkey);
+    }
+  }
+  // For a mutable ptr, use `folly::get_mutable_exception<Ex>(v)` instead.
+  template <typename Src>
+  const Ex* operator()(
+      [[FOLLY_ATTR_CLANG_LIFETIMEBOUND]] Src& s) const noexcept {
+    return operator()(std::as_const(s));
+  }
+
+  // It is unsafe to use `get_exception()` to get a pointer into an rvalue.
+  // If you know what you're doing, add a `static_cast`.
+  template <typename Src>
+  void operator()(Src&&) const noexcept = delete;
+  template <typename Src>
+  void operator()(const Src&&) const noexcept = delete;
+};
+template <typename Ex>
+class get_mutable_exception_fn {
+ public:
+  template <typename Src>
+  Ex* operator()([[FOLLY_ATTR_CLANG_LIFETIMEBOUND]] Src& src) const noexcept {
+    if constexpr (std::is_same_v<Src, std::exception_ptr>) {
+      return exception_ptr_get_object_hint<Ex>(src);
+    } else {
+      constexpr get_exception_tag_t passkey;
+      static_assert( // Return type & `noexcept`ness must match
+          std::is_same_v<
+              Ex*,
+              decltype(src.template get_mutable_exception<Ex>(passkey))> &&
+          noexcept(noexcept(src.template get_mutable_exception<Ex>(passkey))));
+      return src.template get_mutable_exception<Ex>(passkey);
+    }
+  }
+  // You want `folly::get_exception<Ex>(v)` instead.
+  template <typename Src>
+  void operator()(const Src&) const noexcept = delete;
+
+  // It is unsafe to use `get_mutable_exception()` to get a pointer into an
+  // rvalue.  If you know what you're doing, add a `static_cast`.
+  template <typename Src>
+  void operator()(Src&&) const noexcept = delete;
+  template <typename Src>
+  void operator()(const Src&&) const noexcept = delete;
+};
+template <typename Ex = std::exception>
+inline constexpr get_exception_fn<Ex> get_exception{};
+template <typename Ex = std::exception>
+inline constexpr get_mutable_exception_fn<Ex> get_mutable_exception{};
+
 namespace detail {
 
+// The libc++ and cpplib implementations do not have a move constructor or a
+// move-assignment operator. To avoid refcount operations, we must improvise.
+// The libstdc++ implementation has a move constructor and a move-assignment
+// operator but having this does no harm.
+inline std::exception_ptr extract_exception_ptr(
+    std::exception_ptr&& ptr) noexcept {
+  constexpr auto sz = sizeof(std::exception_ptr);
+  // assume relocatability on all platforms
+  // assume nrvo for performance
+  std::exception_ptr ret;
+  std::memcpy(static_cast<void*>(&ret), &ptr, sz);
+  std::memset(static_cast<void*>(&ptr), 0, sz);
+  return ret;
+}
+
 struct make_exception_ptr_with_arg_ {
+  using dtor_ret_t = std::conditional_t<kIsArchWasm, void*, void>;
+
   size_t size = 0;
   std::type_info const* type = nullptr;
   void (*ctor)(void*, void*) = nullptr;
-  void (*dtor)(void*) = nullptr;
+  dtor_ret_t (*dtor)(void*) = nullptr;
 
   template <typename F, typename E>
   static void make(void* p, void* f) {
     ::new (p) E((*static_cast<F*>(f))());
+  }
+
+  template <typename E>
+  static dtor_ret_t dtor_(void* ptr) {
+    static_cast<E*>(ptr)->~E();
+    return dtor_ret_t(ptr);
   }
 
   template <typename F, typename E = decltype(FOLLY_DECLVAL(F&)())>
@@ -590,7 +746,7 @@ struct make_exception_ptr_with_arg_ {
       : size{sizeof(E)},
         type{FOLLY_TYPE_INFO_OF(E)},
         ctor{make<F, E>},
-        dtor{thunk::dtor<E>} {}
+        dtor{dtor_<E>} {}
 };
 
 std::exception_ptr make_exception_ptr_with_(
@@ -742,21 +898,22 @@ class exception_shared_string {
 
   struct state; // alignment is alignof(void*)
 
-  //  state_ can be either state* or char const*
-  //  - low bit 0: state*
-  //  - low bit 1: char const* to &literal_state::what
-  uintptr_t const state_;
-
-  //  private; the wrapping public ctor passes only static-lifetime constants
-  explicit exception_shared_string(literal_state_base const&) noexcept;
+  //  what_ encodes where the string lives
+  //  - low bit 0: in an allocated state
+  //  - low bit 1: in a literal_state
+  char const* const what_{};
 
   exception_shared_string(std::size_t, format_sig_&, void*);
+
+  static char const* from_state(state const* state) noexcept;
+  static state* to_state(char const* what) noexcept;
+  void ruin_state() noexcept;
 
  public:
 #if FOLLY_CPLUSPLUS >= 202002 && !defined(__NVCC__)
   template <std::size_t N, literal_string<char, N> Str>
-  explicit exception_shared_string(vtag_t<Str>) noexcept
-      : exception_shared_string(literal_state_instance<Str>) {}
+  constexpr explicit exception_shared_string(vtag_t<Str>) noexcept
+      : what_{literal_state_instance<Str>.what.c_str()} {}
 #endif
 
   explicit exception_shared_string(char const*);
@@ -776,10 +933,20 @@ class exception_shared_string {
             size, ffun_<F>, &reinterpret_cast<unsigned char&>(func)) {}
 
   exception_shared_string(exception_shared_string const&) noexcept;
-  ~exception_shared_string();
+
+#if FOLLY_CPLUSPLUS >= 202002 && defined(__cpp_lib_is_constant_evaluated)
+  constexpr ~exception_shared_string() {
+    if (!std::is_constant_evaluated()) {
+      ruin_state();
+    }
+  }
+#else
+  ~exception_shared_string() { ruin_state(); }
+#endif
+
   void operator=(exception_shared_string const&) = delete;
 
-  char const* what() const noexcept;
+  char const* what() const noexcept { return what_; }
 };
 
 } // namespace folly

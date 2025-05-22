@@ -1,8 +1,132 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load(
+    "@fbsource//xplat/folly:defs.bzl",
+    "folly_xplat_library",
+)
+load("@fbsource//xplat/pfh/triage_InfrastructureSupermoduleOptou:DEFS.bzl", "triage_InfrastructureSupermoduleOptou")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "base64_common",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Base64Common.h"],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "base64_constants",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Base64Constants.h"],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "base64_hidden_constants",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Base64HiddenConstants.h"],
+    deps = [
+        "//xplat/folly/detail/base64_detail:base64_constants",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "base64_scalar",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Base64Scalar.h"],
+    deps = [
+        "//xplat/folly/detail/base64_detail:base64_common",
+        "//xplat/folly/detail/base64_detail:base64_constants",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "base64_simd",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Base64Simd.h"],
+    deps = [
+        "//xplat/folly:c_portability",
+        "//xplat/folly/detail/base64_detail:base64_common",
+        "//xplat/folly/detail/base64_detail:base64_constants",
+        "//xplat/folly/detail/base64_detail:base64_hidden_constants",
+        "//xplat/folly/detail/base64_detail:base64_scalar",
+        "//xplat/folly/detail/base64_detail:base64_swar",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "base64_sse4_2_platform",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Base64_SSE4_2_Platform.h"],
+    deps = [
+        "//xplat/folly:portability",
+        "//xplat/folly/detail/base64_detail:base64_hidden_constants",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "base64_sse4_2",
+    srcs = ["Base64_SSE4_2.cpp"],
+    compiler_flags = select({
+        "DEFAULT": [],
+        "ovr_config//cpu:x86_64": ["-msse4.2"],
+    }),
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Base64_SSE4_2.h"],
+    deps = [
+        "//xplat/folly:portability",
+        "//xplat/folly/detail/base64_detail:base64_common",
+        "//xplat/folly/detail/base64_detail:base64_simd",
+        "//xplat/folly/detail/base64_detail:base64_sse4_2_platform",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "base64_swar",
+    srcs = ["Base64SWAR.cpp"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Base64SWAR.h"],
+    deps = [
+        "//xplat/folly/detail/base64_detail:base64_common",
+        "//xplat/folly/detail/base64_detail:base64_constants",
+        "//xplat/folly/detail/base64_detail:base64_hidden_constants",
+        "//xplat/folly/detail/base64_detail:base64_scalar",
+    ],
+    exported_deps = [
+        "//xplat/folly:portability",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "base64_api",
+    srcs = ["Base64Api.cpp"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Base64Api.h"],
+    deps = [
+        "//xplat/folly/detail/base64_detail:base64_common",
+        "//xplat/folly/detail/base64_detail:base64_scalar",
+    ],
+    exported_deps = [
+        "//xplat/folly:cpu_id",
+        "//xplat/folly:portability",
+        "//xplat/folly:portability_constexpr",
+        "//xplat/folly/detail/base64_detail:base64_sse4_2",
+        "//xplat/folly/detail/base64_detail:base64_swar",
+    ],
+)
+
+# !!!! fbcode/folly/detail/base64_detail/TARGETS was merged into this file, see https://fburl.com/workplace/xl8l9yuo for more info !!!!
+
+fbcode_target(
+    _kind = cpp_library,
     name = "base64_api",
     srcs = ["Base64Api.cpp"],
     headers = ["Base64Api.h"],
@@ -19,17 +143,20 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "base64_common",
     headers = ["Base64Common.h"],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "base64_constants",
     headers = ["Base64Constants.h"],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "base64_hidden_constants",
     headers = ["Base64HiddenConstants.h"],
     exported_deps = [
@@ -37,7 +164,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "base64_scalar",
     headers = ["Base64Scalar.h"],
     exported_deps = [
@@ -46,7 +174,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "base64_simd",
     headers = ["Base64Simd.h"],
     exported_deps = [
@@ -59,7 +188,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "base64_sse4_2_platform",
     headers = ["Base64_SSE4_2_Platform.h"],
     exported_deps = [
@@ -68,7 +198,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "base64_sse4_2",
     srcs = ["Base64_SSE4_2.cpp"],
     headers = ["Base64_SSE4_2.h"],
@@ -86,7 +217,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "base64_swar",
     srcs = ["Base64SWAR.cpp"],
     headers = ["Base64SWAR.h"],

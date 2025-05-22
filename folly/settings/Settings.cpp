@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <fmt/format.h>
 #include <folly/settings/Settings.h>
 
 #include <map>
@@ -23,23 +24,20 @@
 namespace folly {
 namespace settings {
 namespace detail {
-namespace {
-using SettingsMap = std::map<std::string, SettingCoreBase*>;
 Synchronized<SettingsMap>& settingsMap() {
   static Indestructible<Synchronized<SettingsMap>> map;
   return *map;
 }
-} // namespace
 
 void registerSetting(SettingCoreBase& core) {
   if (core.meta().project.empty() ||
       core.meta().project.find('_') != std::string::npos) {
-    throw std::logic_error(
-        "Setting project must be nonempty and cannot contain underscores: " +
-        core.meta().project.str());
+    throw std::logic_error(fmt::format(
+        "Setting project must be nonempty and cannot contain underscores: {}",
+        core.meta().project));
   }
 
-  auto fullname = core.meta().project.str() + "_" + core.meta().name.str();
+  auto fullname = fmt::format("{}_{}", core.meta().project, core.meta().name);
 
   auto mapPtr = settingsMap().wlock();
   auto it = mapPtr->find(fullname);
@@ -51,9 +49,9 @@ void registerSetting(SettingCoreBase& core) {
 
 } // namespace detail
 
-Optional<SettingMetadata> getSettingsMeta(StringPiece settingName) {
+Optional<SettingMetadata> getSettingsMeta(std::string_view settingName) {
   auto mapPtr = detail::settingsMap().rlock();
-  auto it = mapPtr->find(settingName.str());
+  auto it = mapPtr->find(std::string(settingName));
   if (it == mapPtr->end()) {
     return none;
   }
@@ -72,9 +70,11 @@ std::vector<SettingMetadata> getAllSettingsMeta() {
 }
 
 SetResult Snapshot::setFromString(
-    StringPiece settingName, StringPiece newValue, StringPiece reason) {
+    std::string_view settingName,
+    std::string_view newValue,
+    std::string_view reason) {
   auto mapPtr = detail::settingsMap().rlock();
-  auto it = mapPtr->find(settingName.str());
+  auto it = mapPtr->find(std::string(settingName));
   if (it == mapPtr->end()) {
     return makeUnexpected(SetErrorCode::NotFound);
   }
@@ -82,9 +82,11 @@ SetResult Snapshot::setFromString(
 }
 
 SetResult Snapshot::forceSetFromString(
-    StringPiece settingName, StringPiece newValue, StringPiece reason) {
+    std::string_view settingName,
+    std::string_view newValue,
+    std::string_view reason) {
   auto mapPtr = detail::settingsMap().rlock();
-  auto it = mapPtr->find(settingName.str());
+  auto it = mapPtr->find(std::string(settingName));
   if (it == mapPtr->end()) {
     return makeUnexpected(SetErrorCode::NotFound);
   }
@@ -93,27 +95,27 @@ SetResult Snapshot::forceSetFromString(
 }
 
 Optional<Snapshot::SettingsInfo> Snapshot::getAsString(
-    StringPiece settingName) const {
+    std::string_view settingName) const {
   auto mapPtr = detail::settingsMap().rlock();
-  auto it = mapPtr->find(settingName.str());
+  auto it = mapPtr->find(std::string(settingName));
   if (it == mapPtr->end()) {
     return none;
   }
   return it->second->getAsString(this);
 }
 
-SetResult Snapshot::resetToDefault(StringPiece settingName) {
+SetResult Snapshot::resetToDefault(std::string_view settingName) {
   auto mapPtr = detail::settingsMap().rlock();
-  auto it = mapPtr->find(settingName.str());
+  auto it = mapPtr->find(std::string(settingName));
   if (it == mapPtr->end()) {
     return makeUnexpected(SetErrorCode::NotFound);
   }
   return it->second->resetToDefault(this);
 }
 
-SetResult Snapshot::forceResetToDefault(StringPiece settingName) {
+SetResult Snapshot::forceResetToDefault(std::string_view settingName) {
   auto mapPtr = detail::settingsMap().rlock();
-  auto it = mapPtr->find(settingName.str());
+  auto it = mapPtr->find(std::string(settingName));
   if (it == mapPtr->end()) {
     return makeUnexpected(SetErrorCode::NotFound);
   }
@@ -206,7 +208,9 @@ std::pair<std::string, std::string>
 SnapshotBase::SettingVisitorInfo::valueAndReason() const {
   return core_.getAsString(&snapshot_);
 }
-
+std::string_view SnapshotBase::SettingVisitorInfo::updateReason() const {
+  return core_.getUpdateReason(&snapshot_);
+}
 } // namespace detail
 
 void Snapshot::publish() {

@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "function_benchmark",
     srcs = [
         "benchmark_impl.cpp",

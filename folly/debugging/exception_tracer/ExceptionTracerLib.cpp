@@ -23,26 +23,26 @@
 #include <folly/SharedMutex.h>
 #include <folly/Synchronized.h>
 
-#if defined(__GLIBCXX__)
-
+#if __has_include(<dlfcn.h>)
 #include <dlfcn.h>
+#endif
+
+#if FOLLY_HAS_EXCEPTION_TRACER
 
 namespace __cxxabiv1 {
 
 extern "C" {
 #ifdef FOLLY_STATIC_LIBSTDCXX
-void __real___cxa_throw(
-    void* thrownException, std::type_info* type, void (*destructor)(void*))
-    __attribute__((__noreturn__));
+[[noreturn]] void __real___cxa_throw(
+    void* thrownException, std::type_info* type, void (*destructor)(void*));
 void* __real___cxa_begin_catch(void* excObj) noexcept;
-void __real___cxa_rethrow(void) __attribute__((__noreturn__));
+[[noreturn]] void __real___cxa_rethrow(void);
 void __real___cxa_end_catch(void);
 #else
-void __cxa_throw(
-    void* thrownException, std::type_info* type, void (*destructor)(void*))
-    __attribute__((__noreturn__));
+__attribute__((__noreturn__)) void __cxa_throw(
+    void* thrownException, std::type_info* type, void (*destructor)(void*));
 void* __cxa_begin_catch(void* excObj) noexcept;
-void __cxa_rethrow(void) __attribute__((__noreturn__));
+__attribute__((__noreturn__)) void __cxa_rethrow(void);
 void __cxa_end_catch(void);
 #endif
 }
@@ -51,21 +51,28 @@ void __cxa_end_catch(void);
 
 #ifdef FOLLY_STATIC_LIBSTDCXX
 extern "C" {
-void __real__ZSt17rethrow_exceptionNSt15__exception_ptr13exception_ptrE(
+#if __GLIBCXX__
+[[noreturn]] void
+__real__ZSt17rethrow_exceptionNSt15__exception_ptr13exception_ptrE(
     std::exception_ptr ep);
-} // namespace std
+#endif
+
+#if _LIBCPP_VERSION
+[[noreturn]] void __real__ZSt17rethrow_exceptionSt13exception_ptr(
+    std::exception_ptr ep);
+#endif
+} // extern "C"
+
 #endif
 
 using namespace folly::exception_tracer;
 
 namespace {
 
-template <typename Function>
+template <typename Sig>
 class CallbackHolder {
  public:
-  void registerCallback(Function f) {
-    callbacks_.wlock()->push_back(std::move(f));
-  }
+  void registerCallback(Sig& f) { callbacks_.wlock()->push_back(f); }
 
   // always inline to enforce kInternalFramesNumber
   template <typename... Args>
@@ -77,7 +84,7 @@ class CallbackHolder {
   }
 
  private:
-  folly::Synchronized<std::vector<Function>> callbacks_;
+  folly::Synchronized<std::vector<Sig*>> callbacks_;
 };
 
 } // namespace
@@ -85,13 +92,13 @@ class CallbackHolder {
 namespace folly {
 namespace exception_tracer {
 
-#define FOLLY_EXNTRACE_DECLARE_CALLBACK(NAME)                    \
-  CallbackHolder<NAME##Type>& get##NAME##Callbacks() {           \
-    static Indestructible<CallbackHolder<NAME##Type>> Callbacks; \
-    return *Callbacks;                                           \
-  }                                                              \
-  void register##NAME##Callback(NAME##Type callback) {           \
-    get##NAME##Callbacks().registerCallback(callback);           \
+#define FOLLY_EXNTRACE_DECLARE_CALLBACK(NAME)                   \
+  CallbackHolder<NAME##Sig>& get##NAME##Callbacks() {           \
+    static Indestructible<CallbackHolder<NAME##Sig>> Callbacks; \
+    return *Callbacks;                                          \
+  }                                                             \
+  void register##NAME##Callback(NAME##Sig& callback) {          \
+    get##NAME##Callbacks().registerCallback(callback);          \
   }
 
 FOLLY_EXNTRACE_DECLARE_CALLBACK(CxaThrow)
@@ -105,28 +112,19 @@ FOLLY_EXNTRACE_DECLARE_CALLBACK(RethrowException)
 } // namespace exception_tracer
 } // namespace folly
 
-// Clang is smart enough to understand that the symbols we're loading
-// are [[noreturn]], but GCC is not. In order to be able to build with
-// -Wunreachable-code enable for Clang, these __builtin_unreachable()
-// calls need to go away. Everything else is messy though, so just
-// #define it to an empty macro under Clang and be done with it.
-#ifdef __clang__
-#define __builtin_unreachable()
-#endif
-
 namespace __cxxabiv1 {
 
 #ifdef FOLLY_STATIC_LIBSTDCXX
 extern "C" {
 
-__attribute__((__noreturn__)) void __wrap___cxa_throw(
+[[noreturn]] void __wrap___cxa_throw(
     void* thrownException, std::type_info* type, void (*destructor)(void*)) {
   getCxaThrowCallbacks().invoke(thrownException, type, &destructor);
   __real___cxa_throw(thrownException, type, destructor);
   __builtin_unreachable(); // orig_cxa_throw never returns
 }
 
-__attribute__((__noreturn__)) void __wrap___cxa_rethrow() {
+[[noreturn]] void __wrap___cxa_rethrow() {
   // __cxa_rethrow leaves the current exception on the caught stack,
   // and __cxa_begin_catch recognizes that case.  We could do the same, but
   // we'll implement something simpler (and slower): we pop the exception from
@@ -151,7 +149,7 @@ void __wrap___cxa_end_catch() {
 
 #else
 
-void __cxa_throw(
+__attribute__((__noreturn__)) void __cxa_throw(
     void* thrownException, std::type_info* type, void (*destructor)(void*)) {
   static auto orig_cxa_throw =
       reinterpret_cast<decltype(&__cxa_throw)>(dlsym(RTLD_NEXT, "__cxa_throw"));
@@ -160,7 +158,7 @@ void __cxa_throw(
   __builtin_unreachable(); // orig_cxa_throw never returns
 }
 
-void __cxa_rethrow() {
+__attribute__((__noreturn__)) void __cxa_rethrow() {
   // __cxa_rethrow leaves the current exception on the caught stack,
   // and __cxa_begin_catch recognizes that case.  We could do the same, but
   // we'll implement something simpler (and slower): we pop the exception from
@@ -197,26 +195,44 @@ void __cxa_end_catch() {
 // TODO(tudorb): Dicey, as it relies on the fact that std::exception_ptr
 // is typedef'ed to a type in namespace __exception_ptr
 extern "C" {
-void __wrap__ZSt17rethrow_exceptionNSt15__exception_ptr13exception_ptrE(
+
+#ifdef __GLIBCXX__
+[[noreturn]] void
+__wrap__ZSt17rethrow_exceptionNSt15__exception_ptr13exception_ptrE(
     std::exception_ptr ep) {
   getRethrowExceptionCallbacks().invoke(ep);
   __real__ZSt17rethrow_exceptionNSt15__exception_ptr13exception_ptrE(ep);
   __builtin_unreachable(); // orig_rethrow_exception never returns
 }
+#endif
+
+#ifdef _LIBCPP_VERSION
+[[noreturn]] void __wrap__ZSt17rethrow_exceptionSt13exception_ptr(
+    std::exception_ptr ep) {
+  getRethrowExceptionCallbacks().invoke(ep);
+  __real__ZSt17rethrow_exceptionSt13exception_ptr(ep);
+  __builtin_unreachable(); // orig_rethrow_exception never returns
+}
+#endif
 }
 
 #else
 
+namespace folly {
+constexpr const char* kRethrowExceptionMangledName = kIsGlibcxx
+    ? "_ZSt17rethrow_exceptionNSt15__exception_ptr13exception_ptrE"
+    : "_ZSt17rethrow_exceptionSt13exception_ptr";
+}
+
 namespace std {
 
-void rethrow_exception(std::exception_ptr ep) {
+__attribute__((__noreturn__)) void rethrow_exception(std::exception_ptr ep) {
   // Mangled name for std::rethrow_exception
   // TODO(tudorb): Dicey, as it relies on the fact that std::exception_ptr
   // is typedef'ed to a type in namespace __exception_ptr
   static auto orig_rethrow_exception =
-      reinterpret_cast<decltype(&rethrow_exception)>(dlsym(
-          RTLD_NEXT,
-          "_ZSt17rethrow_exceptionNSt15__exception_ptr13exception_ptrE"));
+      reinterpret_cast<decltype(&rethrow_exception)>(
+          dlsym(RTLD_NEXT, folly::kRethrowExceptionMangledName));
   getRethrowExceptionCallbacks().invoke(ep);
   orig_rethrow_exception(std::move(ep));
   __builtin_unreachable(); // orig_rethrow_exception never returns
@@ -225,4 +241,4 @@ void rethrow_exception(std::exception_ptr ep) {
 } // namespace std
 #endif
 
-#endif // defined(__GLIBCXX__)
+#endif //  FOLLY_HAS_EXCEPTION_TRACER

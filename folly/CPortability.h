@@ -59,6 +59,12 @@
 #define FOLLY_HAS_FEATURE(...) 0
 #endif
 
+#if defined(__has_warning)
+#define FOLLY_HAS_WARNING(...) __has_warning(__VA_ARGS__)
+#else
+#define FOLLY_HAS_WARNING(...) 0
+#endif
+
 /* FOLLY_SANITIZE_ADDRESS is defined to 1 if the current compilation unit
  * is being compiled with ASAN or HWASAN enabled.
  *
@@ -236,6 +242,16 @@
 #define FOLLY_ATTR_WEAK
 #endif
 
+#if defined(__has_attribute)
+#if __has_attribute(weak)
+#define FOLLY_ATTR_WEAK_SYMBOLS_COMPILE_TIME __attribute__((__weak__))
+#else
+#define FOLLY_ATTR_WEAK_SYMBOLS_COMPILE_TIME
+#endif
+#else
+#define FOLLY_ATTR_WEAK_SYMBOLS_COMPILE_TIME
+#endif
+
 // Microsoft ABI version (can be overridden manually if necessary)
 #ifndef FOLLY_MICROSOFT_ABI_VER
 #ifdef _MSC_VER
@@ -305,6 +321,9 @@
 #define FOLLY_GNU_DISABLE_WARNING(warningName) \
   _Pragma(                                     \
       FOLLY_GNU_DISABLE_WARNING_INTERNAL2(GCC diagnostic ignored warningName))
+#define FOLLY_GNU_ENABLE_WARNING(warningName) \
+  _Pragma(                                    \
+      FOLLY_GNU_DISABLE_WARNING_INTERNAL2(GCC diagnostic warning warningName))
 #ifdef __clang__
 #define FOLLY_CLANG_DISABLE_WARNING(warningName) \
   FOLLY_GNU_DISABLE_WARNING(warningName)

@@ -1,10 +1,34 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
+load("@fbsource//tools/build_defs:default_platform_defs.bzl", "ANDROID", "APPLE", "CXX", "FBCODE", "WINDOWS")
 load("@fbsource//tools/build_defs:fb_native_wrapper.bzl", "fb_native")
+load("@fbsource//tools/build_defs:fb_xplat_cxx_library.bzl", "fb_xplat_cxx_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "subdir_glob")
+load("@fbsource//xplat/folly:defs.bzl", "DEFAULT_APPLE_SDKS")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+non_fbcode_target(
+    _kind = fb_xplat_cxx_library,
+    name = "test-headers",
+    header_namespace = "",
+    exported_headers = subdir_glob(
+        [
+            ("", "**/*.h"),
+        ],
+        prefix = "folly/tracing/test",
+    ),
+    apple_sdks = DEFAULT_APPLE_SDKS,
+    force_static = True,
+    platforms = (ANDROID, APPLE, CXX, FBCODE, WINDOWS),
+    visibility = ["PUBLIC"],
+)
+
+# !!!! fbcode/folly/tracing/test/TARGETS was merged into this file, see https://fburl.com/workplace/xl8l9yuo for more info !!!!
+
+fbcode_target(
+    _kind = cpp_unittest,
     name = "async_stack_test",
     srcs = ["AsyncStackTest.cpp"],
     deps = [
@@ -17,7 +41,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "static_tracepoint_test",
     srcs = ["StaticTracepointTest.cpp"],
     labels = ["oss-broken"],
@@ -28,7 +53,7 @@ cpp_unittest(
         "//folly:random",
         "//folly:string",
         "//folly:subprocess",
-        "//folly/experimental/symbolizer/detail:debug",
+        "//folly/debugging/symbolizer/detail:debug",
         "//folly/lang:bits",
         "//folly/portability:filesystem",
         "//folly/portability:gtest",
@@ -37,7 +62,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "static_tracepoint_test_module",
     srcs = [
         "StaticTracepointTestModule.cpp",
@@ -55,7 +81,8 @@ fb_native.filegroup(
     srcs = ["StaticTracepointSectionTest.lds"],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "static_tracepoint_section_test",
     srcs = ["StaticTracepointSectionTest.cpp"],
     headers = [],

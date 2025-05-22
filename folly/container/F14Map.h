@@ -102,6 +102,7 @@ class F14BasicMap {
   using hash_token_type = F14HashToken;
   using hasher = typename Policy::Hasher;
   using key_equal = typename Policy::KeyEqual;
+  using hashed_key_type = F14HashedKey<key_type, hasher, key_equal>;
   using allocator_type = typename Policy::Alloc;
   using reference = value_type&;
   using const_reference = value_type const&;
@@ -436,28 +437,12 @@ class F14BasicMap {
 
   template <typename M>
   std::pair<iterator, bool> insert_or_assign(
-      const F14HashedKey<key_type, hasher>& hashedKey, M&& obj) {
-    return insert_or_assign(
-        hashedKey.getHashToken(), hashedKey.getKey(), std::forward<M>(obj));
-  }
-
-  template <typename M>
-  std::pair<iterator, bool> insert_or_assign(
       F14HashToken const& token, key_type&& key, M&& obj) {
     auto rv = try_emplace_token(token, std::move(key), std::forward<M>(obj));
     if (!rv.second) {
       rv.first->second = std::forward<M>(obj);
     }
     return rv;
-  }
-
-  template <typename M>
-  std::pair<iterator, bool> insert_or_assign(
-      F14HashedKey<key_type, hasher>&& hashedKey, M&& obj) {
-    return insert_or_assign(
-        hashedKey.getHashToken(),
-        std::move(hashedKey.getKey()),
-        std::forward<M>(obj));
   }
 
   template <typename M>
@@ -484,7 +469,8 @@ class F14BasicMap {
   template <typename K, typename M>
   EnableHeterogeneousInsert<K, std::pair<iterator, bool>> insert_or_assign(
       F14HashToken const& token, K&& key, M&& obj) {
-    auto rv = try_emplace(token, std::forward<K>(key), std::forward<M>(obj));
+    auto rv =
+        try_emplace_token(token, std::forward<K>(key), std::forward<M>(obj));
     if (!rv.second) {
       rv.first->second = std::forward<M>(obj);
     }
@@ -556,15 +542,6 @@ class F14BasicMap {
 
   template <typename... Args>
   std::pair<iterator, bool> try_emplace_token(
-      const F14HashedKey<key_type, hasher>& hashedKey, Args&&... args) {
-    return try_emplace_token(
-        hashedKey.getHashToken(),
-        hashedKey.getKey(),
-        std::forward<Args>(args)...);
-  }
-
-  template <typename... Args>
-  std::pair<iterator, bool> try_emplace_token(
       F14HashToken const& token, key_type&& key, Args&&... args) {
     auto rv = table_.tryEmplaceValueWithToken(
         token,
@@ -573,15 +550,6 @@ class F14BasicMap {
         std::forward_as_tuple(std::move(key)),
         std::forward_as_tuple(std::forward<Args>(args)...));
     return std::make_pair(table_.makeIter(rv.first), rv.second);
-  }
-
-  template <typename... Args>
-  std::pair<iterator, bool> try_emplace_token(
-      F14HashedKey<key_type, hasher>&& hashedKey, Args&&... args) {
-    return try_emplace_token(
-        hashedKey.getHashToken(),
-        std::move(hashedKey.getKey()),
-        std::forward<Args>(args)...);
   }
 
   template <typename... Args>
@@ -876,21 +844,9 @@ class F14BasicMap {
     return table_.makeIter(table_.find(token, key));
   }
 
-  FOLLY_ALWAYS_INLINE iterator
-  find(const F14HashedKey<key_type, hasher>& hashedKey) {
-    return table_.makeIter(
-        table_.find(hashedKey.getHashToken(), hashedKey.getKey()));
-  }
-
   FOLLY_ALWAYS_INLINE const_iterator
   find(F14HashToken const& token, key_type const& key) const {
     return table_.makeConstIter(table_.find(token, key));
-  }
-
-  FOLLY_ALWAYS_INLINE const_iterator
-  find(F14HashedKey<key_type, hasher> const& hashedKey) const {
-    return table_.makeIter(
-        table_.find(hashedKey.getHashToken(), hashedKey.getKey()));
   }
 
   template <typename K>
@@ -934,11 +890,6 @@ class F14BasicMap {
   FOLLY_ALWAYS_INLINE bool contains(
       F14HashToken const& token, key_type const& key) const {
     return !table_.find(token, key).atEnd();
-  }
-
-  FOLLY_ALWAYS_INLINE bool contains(
-      const F14HashedKey<key_type, hasher>& hashedKey) const {
-    return !table_.find(hashedKey.getHashToken(), hashedKey.getKey()).atEnd();
   }
 
   template <typename K>

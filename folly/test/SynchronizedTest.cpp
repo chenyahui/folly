@@ -878,8 +878,8 @@ TEST(FollyLockTest, TestVariadicLockWithArbitraryLockables) {
   auto&& one = std::mutex{};
   auto&& two = std::mutex{};
 
-  auto lckOne = std::unique_lock<std::mutex>{one, std::defer_lock};
-  auto lckTwo = std::unique_lock<std::mutex>{two, std::defer_lock};
+  auto lckOne = std::unique_lock{one, std::defer_lock};
+  auto lckTwo = std::unique_lock{two, std::defer_lock};
   folly::lock(lckOne, lckTwo);
   EXPECT_TRUE(lckOne);
   EXPECT_TRUE(lckTwo);
@@ -1015,8 +1015,8 @@ class TestStruct {
   TestStruct(int a, int b) : a_{a}, b_{b} {}
 
  private:
-  int a_{0};
-  int b_{0};
+  [[maybe_unused]] int a_{0};
+  [[maybe_unused]] int b_{0};
 };
 } // namespace
 

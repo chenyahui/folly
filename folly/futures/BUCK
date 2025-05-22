@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "barrier",
     srcs = ["Barrier.cpp"],
     headers = ["Barrier.h"],
@@ -18,7 +20,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "core",
     srcs = [
         "Future.cpp",
@@ -79,7 +82,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "future_splitter",
     headers = ["FutureSplitter.h"],
     exported_deps = [
@@ -89,7 +93,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "futures",
     exported_deps = [
         ":barrier",  # @manual
@@ -103,7 +108,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "manual_timekeeper",
     srcs = ["ManualTimekeeper.cpp"],
     headers = ["ManualTimekeeper.h"],
@@ -116,7 +122,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "portability",
     headers = ["Portability.h"],
     exported_deps = [
@@ -124,7 +131,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "shared_promise",
     srcs = ["SharedPromise.cpp"],
     headers = [
@@ -139,7 +147,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "cleanup",
     headers = ["Cleanup.h"],
     exported_deps = [

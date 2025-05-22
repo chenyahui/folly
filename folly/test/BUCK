@@ -1,3 +1,4 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
@@ -5,7 +6,8 @@ load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "ahm_int_stress_test",
     srcs = ["AHMIntStressTest.cpp"],
     headers = [],
@@ -17,7 +19,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "unicode_test",
     srcs = ["UnicodeTest.cpp"],
     headers = [],
@@ -28,7 +31,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "arena_smart_ptr_test",
     srcs = ["ArenaSmartPtrTest.cpp"],
     headers = [],
@@ -39,7 +43,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "ascii_case_insensitive_benchmark",
     srcs = ["AsciiCaseInsensitiveBenchmark.cpp"],
     headers = [],
@@ -52,7 +57,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "ascii_case_insensitive_test",
     srcs = ["AsciiCaseInsensitiveTest.cpp"],
     headers = [],
@@ -63,7 +69,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "base64_test",
     srcs = ["base64_test.cpp"],
     headers = [],
@@ -73,7 +80,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "concurrent_bit_set_test",
     srcs = ["ConcurrentBitSetTest.cpp"],
     headers = [],
@@ -87,7 +95,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "buffered_atomic_test",
     srcs = ["BufferedAtomicTest.cpp"],
     headers = [],
@@ -99,7 +108,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "atomic_hash_array_test",
     srcs = ["AtomicHashArrayTest.cpp"],
     headers = [],
@@ -114,7 +124,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "atomic_hash_map_test",
     srcs = ["AtomicHashMapTest.cpp"],
     headers = [],
@@ -132,7 +143,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "atomic_linked_list_test",
     srcs = ["AtomicLinkedListTest.cpp"],
     headers = [],
@@ -144,7 +156,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "atomic_unordered_map_test",
     srcs = ["AtomicUnorderedMapTest.cpp"],
     headers = [],
@@ -157,7 +170,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "benchmark_test",
     srcs = ["BenchmarkTest.cpp"],
     deps = [
@@ -170,7 +184,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "benchmark_integration_test",
     srcs = ["BenchmarkIntegrationTest.cpp"],
     headers = [],
@@ -184,7 +199,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "cancellation_token_bench",
     srcs = ["CancellationTokenBench.cpp"],
     deps = [
@@ -193,7 +209,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "cancellation_token_test",
     srcs = ["CancellationTokenTest.cpp"],
     deps = [
@@ -204,7 +221,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "chrono_bench",
     srcs = ["ChronoBench.cpp"],
     deps = [
@@ -218,7 +236,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "chrono_test",
     srcs = ["ChronoTest.cpp"],
     deps = [
@@ -227,7 +246,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "clock_gettime_wrappers_test",
     srcs = ["ClockGettimeWrappersTest.cpp"],
     headers = [],
@@ -238,7 +258,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "concurrent_lazy_test",
     srcs = ["ConcurrentLazyTest.cpp"],
     deps = [
@@ -247,7 +268,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "concurrent_skip_list_benchmark",
     srcs = ["ConcurrentSkipListBenchmark.cpp"],
     headers = [],
@@ -266,7 +288,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "concurrent_skip_list_test",
     srcs = ["ConcurrentSkipListTest.cpp"],
     headers = [],
@@ -288,7 +311,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "constexpr_math_test",
     srcs = ["ConstexprMathTest.cpp"],
     headers = [],
@@ -300,7 +324,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "constructor_callback_list_test",
     srcs = ["ConstructorCallbackListTest.cpp"],
     headers = [],
@@ -310,7 +335,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "constexpr_math_benchmark",
     srcs = ["ConstexprMathBenchmark.cpp"],
     headers = [],
@@ -323,7 +349,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "conv_benchmark",
     srcs = ["ConvBenchmark.cpp"],
     headers = [],
@@ -339,7 +366,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "conv_test",
     srcs = ["ConvTest.cpp"],
     headers = [],
@@ -355,7 +383,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "cpu_id_test",
     srcs = ["CpuIdTest.cpp"],
     headers = [],
@@ -365,7 +394,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "demangle_test",
     srcs = ["DemangleTest.cpp"],
     headers = [],
@@ -376,7 +406,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "deterministic_schedule",
     srcs = [
         "BufferedAtomic.cpp",
@@ -404,7 +435,8 @@ cpp_library(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "deterministic_schedule_test",
     srcs = ["DeterministicScheduleTest.cpp"],
     headers = [],
@@ -416,7 +448,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "discriminated_ptr_test",
     srcs = ["DiscriminatedPtrTest.cpp"],
     headers = [],
@@ -429,7 +462,8 @@ cpp_unittest(
 # This test depends only on :dynamic.  Tests which require other
 # dependencies should be added to dynamic_other_test.
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "endian_test",
     srcs = ["EndianTest.cpp"],
     headers = [],
@@ -439,7 +473,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "exception_string_test",
     srcs = ["ExceptionStringTest.cpp"],
     headers = [],
@@ -450,18 +485,21 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "exception_test",
     srcs = ["ExceptionTest.cpp"],
     headers = [],
     deps = [
         "//folly:exception",
+        "//folly/portability:gmock",
         "//folly/portability:gtest",
         "//folly/testing:test_util",
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "exception_wrapper_benchmark",
     srcs = ["ExceptionWrapperBenchmark.cpp"],
     headers = [],
@@ -475,7 +513,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "exception_wrapper_test",
     srcs = ["ExceptionWrapperTest.cpp"],
     headers = [],
@@ -492,7 +531,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "executor_test",
     srcs = ["ExecutorTest.cpp"],
     headers = [],
@@ -503,7 +543,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "expected_coroutines_bench",
     srcs = ["ExpectedCoroutinesBench.cpp"],
     headers = [],
@@ -516,7 +557,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "expected_coroutines_test",
     srcs = ["ExpectedCoroutinesTest.cpp"],
     headers = [],
@@ -528,7 +570,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "expected_test",
     srcs = ["ExpectedTest.cpp"],
     headers = [],
@@ -542,7 +585,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "fbstring_benchmark",
     srcs = ["FBStringBenchmark.cpp"],
     headers = ["FBStringTestBenchmarks.cpp.h"],
@@ -555,11 +599,13 @@ cpp_benchmark(
         "//folly:fbstring",
         "//folly:random",
         "//folly/container:foreach",
+        "//folly/lang:keep",
         "//folly/portability:gflags",
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "fbstring_test",
     srcs = ["FBStringTest.cpp"],
     headers = [],
@@ -580,7 +626,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "fbvector_test_util",
     srcs = [
         "FBVectorTestUtil.cpp",
@@ -592,7 +639,8 @@ cpp_library(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "file_test",
     srcs = ["FileTest.cpp"],
     headers = [],
@@ -609,7 +657,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "file_lock_test",
     srcs = ["FileLockTest.cpp"],
     headers = [],
@@ -631,7 +680,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "file_test_lock_helper",
     srcs = ["FileTestLockHelper.cpp"],
     headers = [],
@@ -644,7 +694,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "file_util_test",
     srcs = ["FileUtilTest.cpp"],
     headers = [],
@@ -666,7 +717,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "fingerprint_benchmark",
     srcs = ["FingerprintBenchmark.cpp"],
     headers = [],
@@ -678,7 +730,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "fingerprint_test",
     srcs = ["FingerprintTest.cpp"],
     headers = [],
@@ -693,7 +746,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "fixed_string_test",
     srcs = ["FixedStringTest.cpp"],
     headers = [],
@@ -704,7 +758,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "fmt_utility_test",
     srcs = ["FmtUtilityTest.cpp"],
     deps = [
@@ -712,7 +767,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "format_benchmark",
     srcs = ["FormatBenchmark.cpp"],
     headers = [],
@@ -739,7 +795,8 @@ cpp_benchmark(
 
 # This test depends only on :format.  Tests for user-defined formatters
 # should be added to format_other_test.
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "format_test",
     srcs = ["FormatTest.cpp"],
     headers = [],
@@ -750,7 +807,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "format_other_test",
     srcs = ["FormatOtherTest.cpp"],
     headers = [],
@@ -769,7 +827,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "function_ref_test",
     srcs = ["FunctionRefTest.cpp"],
     headers = [],
@@ -779,7 +838,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "function_ref_benchmark",
     srcs = ["FunctionRefBenchmark.cpp"],
     headers = [],
@@ -790,7 +850,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "function_test",
     srcs = ["FunctionTest.cpp"],
     headers = [],
@@ -802,7 +863,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "futex_test",
     srcs = ["FutexTest.cpp"],
     headers = [],
@@ -818,7 +880,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "group_varint_test",
     srcs = ["GroupVarintTest.cpp"],
     headers = [],
@@ -828,7 +891,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "group_varint_test_ssse3",
     srcs = ["GroupVarintTest.cpp"],
     headers = [],
@@ -839,7 +903,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "indestructible_test",
     srcs = ["IndestructibleTest.cpp"],
     deps = [
@@ -849,7 +914,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "indexed_mem_pool_test",
     srcs = ["IndexedMemPoolTest.cpp"],
     headers = [],
@@ -862,7 +928,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "ip_address_benchmark",
     srcs = ["IPAddressBenchmark.cpp"],
     headers = [],
@@ -880,7 +947,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "ip_address_test",
     srcs = ["IPAddressTest.cpp"],
     supports_static_listing = False,
@@ -896,7 +964,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "iterators_test",
     srcs = ["IteratorsTest.cpp"],
     deps = [
@@ -910,7 +979,8 @@ cpp_unittest(
 # This test depends only on :json.  Tests which require other
 # dependencies should be added to json_other_test.
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "lazy_test",
     srcs = ["LazyTest.cpp"],
     headers = [],
@@ -920,7 +990,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "glog_benchmark",
     srcs = ["GLogBenchmark.cpp"],
     headers = [],
@@ -930,7 +1001,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "glog_test",
     srcs = ["GLogTest.cpp"],
     headers = [],
@@ -940,7 +1012,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "mac_address_test",
     srcs = ["MacAddressTest.cpp"],
     deps = [
@@ -950,7 +1023,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "math_benchmark",
     srcs = ["MathBenchmark.cpp"],
     headers = [],
@@ -960,7 +1034,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "math_test",
     srcs = ["MathTest.cpp"],
     headers = [],
@@ -977,7 +1052,8 @@ cpp_unittest(
 
 # Test MaybeManagedPtr with default settings and on c++17 and c++20.
 # We test c++17 and c++20 explicitly since c++20 can synthesize `operator!=` whereas c++17 cannot.
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "maybe_managed_ptr_test",
     srcs = ["MaybeManagedPtrTest.cpp"],
     headers = [],
@@ -988,7 +1064,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "maybe_managed_ptr_test_c++17",
     srcs = ["MaybeManagedPtrTest.cpp"],
     headers = [],
@@ -1002,7 +1079,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "maybe_managed_ptr_test_c++20",
     srcs = ["MaybeManagedPtrTest.cpp"],
     headers = [],
@@ -1013,7 +1091,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "memset_test",
     srcs = [
         "MemsetTest.cpp",
@@ -1024,7 +1103,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "memset_benchmark",
     srcs = ["MemsetBenchmark.cpp"],
     headers = [],
@@ -1037,7 +1117,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "memcpy_test",
     srcs = ["MemcpyTest.cpp"],
     headers = [],
@@ -1050,7 +1131,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "memcpy_benchmark",
     srcs = ["MemcpyBenchmark.cpp"],
     headers = [],
@@ -1061,7 +1143,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "memcpy_use_test",
     srcs = ["MemcpyUseTest.cpp"],
     deps = [
@@ -1071,7 +1154,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "memory_test",
     srcs = ["MemoryTest.cpp"],
     headers = [],
@@ -1091,7 +1175,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "memory_idler_benchmark",
     srcs = ["MemoryIdlerBenchmark.cpp"],
     headers = [],
@@ -1101,7 +1186,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "memory_idler_test",
     srcs = ["MemoryIdlerTest.cpp"],
     headers = [],
@@ -1113,7 +1199,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "move_wrapper_test",
     srcs = ["MoveWrapperTest.cpp"],
     headers = [],
@@ -1123,7 +1210,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "mpmc_pipeline_test",
     srcs = ["MPMCPipelineTest.cpp"],
     headers = [],
@@ -1138,7 +1226,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "mpmc_queue_test",
     srcs = ["MPMCQueueTest.cpp"],
     headers = [],
@@ -1160,7 +1249,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "observer_container_test_util",
     headers = ["ObserverContainerTestUtil.h"],
     exported_deps = [
@@ -1171,7 +1261,8 @@ cpp_library(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "observer_container_test",
     srcs = ["ObserverContainerTest.cpp"],
     headers = [],
@@ -1184,7 +1275,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "optional_test",
     srcs = ["OptionalTest.cpp"],
     headers = [],
@@ -1196,7 +1288,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "optional_coroutines_test",
     srcs = ["OptionalCoroutinesTest.cpp"],
     headers = [],
@@ -1213,7 +1306,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "replaceable_test",
     srcs = ["ReplaceableTest.cpp"],
     headers = [],
@@ -1223,7 +1317,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "overload_test",
     srcs = ["OverloadTest.cpp"],
     headers = [],
@@ -1237,7 +1332,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "packed_sync_ptr_test",
     srcs = ["PackedSyncPtrTest.cpp"],
     headers = [],
@@ -1247,7 +1343,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "padded_test",
     srcs = ["PaddedTest.cpp"],
     headers = [],
@@ -1260,7 +1357,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "poly_test",
     srcs = ["PolyTest.cpp"],
     deps = [
@@ -1271,7 +1369,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "portability_test",
     srcs = ["PortabilityTest.cpp"],
     headers = [],
@@ -1281,7 +1380,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "producer_consumer_queue_benchmark",
     srcs = ["ProducerConsumerQueueBenchmark.cpp"],
     headers = [],
@@ -1300,7 +1400,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "producer_consumer_queue_test",
     srcs = ["ProducerConsumerQueueTest.cpp"],
     headers = [],
@@ -1313,7 +1414,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "random_benchmark",
     srcs = ["RandomBenchmark.cpp"],
     headers = [],
@@ -1327,7 +1429,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "random_test",
     srcs = ["RandomTest.cpp"],
     headers = [],
@@ -1340,7 +1443,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "range_find_benchmark",
     srcs = ["RangeFindBenchmark.cpp"],
     headers = [],
@@ -1351,7 +1455,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "range_test",
     srcs = ["RangeTest.cpp"],
     headers = [],
@@ -1376,7 +1481,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "scope_guard_test",
     srcs = ["ScopeGuardTest.cpp"],
     headers = [],
@@ -1390,7 +1496,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "shared_mutex_test",
     srcs = ["SharedMutexTest.cpp"],
     headers = [],
@@ -1417,7 +1524,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "singleton_benchmark",
     srcs = ["SingletonBenchmark.cpp"],
     headers = [],
@@ -1432,7 +1540,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "singleton_test",
     srcs = ["SingletonTest.cpp"],
     headers = [],
@@ -1451,7 +1560,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "singleton_test_global",
     srcs = ["SingletonTestGlobal.cpp"],
     headers = [],
@@ -1463,7 +1573,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "singleton_test_structs",
     srcs = ["SingletonTestStructs.cpp"],
     headers = ["SingletonTestStructs.h"],
@@ -1475,7 +1586,8 @@ cpp_library(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "singleton_thread_local_overload.so",
     srcs = ["SingletonThreadLocalTestOverload.cpp"],
     dlopen_enabled = True,
@@ -1485,7 +1597,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "singleton_thread_local_test",
     srcs = ["SingletonThreadLocalTest.cpp"],
     headers = [],
@@ -1510,7 +1623,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "socket_address_test",
     srcs = ["SocketAddressTest.cpp"],
     deps = [
@@ -1524,7 +1638,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "socket_address_test_helper",
     srcs = ["SocketAddressTestHelper.cpp"],
     headers = ["SocketAddressTestHelper.h"],
@@ -1533,7 +1648,8 @@ cpp_library(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "spin_lock_test",
     srcs = ["SpinLockTest.cpp"],
     headers = [],
@@ -1548,7 +1664,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "string_benchmark",
     srcs = ["StringBenchmark.cpp"],
     headers = [],
@@ -1565,7 +1682,8 @@ cpp_benchmark(
     external_deps = [("boost", None, "boost_algorithm")],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "string_to_float_benchmark",
     srcs = ["StringToFloatBenchmark.cpp"],
     headers = [],
@@ -1580,7 +1698,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "string_test",
     srcs = ["StringTest.cpp"],
     headers = [],
@@ -1598,7 +1717,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "subprocess_bench",
     srcs = ["SubprocessBench.cpp"],
     headers = [],
@@ -1609,7 +1729,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "subprocess_test",
     srcs = ["SubprocessTest.cpp"],
     headers = [],
@@ -1621,13 +1742,17 @@ cpp_unittest(
         "//folly:exception",
         "//folly:file_util",
         "//folly:format",
+        "//folly:memory",
         "//folly:string",
         "//folly:subprocess",
+        "//folly/container:span",
         "//folly/experimental/io:fs_util",
         "//folly/gen:base",
         "//folly/gen:file",
         "//folly/gen:string",
+        "//folly/portability:gmock",
         "//folly/portability:gtest",
+        "//folly/portability:sys_syscall",
         "//folly/portability:unistd",
         "//folly/testing:test_util",
     ],
@@ -1637,7 +1762,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "subprocess_test_parent_death_helper",
     srcs = ["SubprocessTestParentDeathHelper.cpp"],
     headers = [],
@@ -1652,7 +1778,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "synchronized_test",
     srcs = ["SynchronizedTest.cpp"],
     headers = [],
@@ -1670,7 +1797,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "synchronized_benchmark",
     srcs = ["SynchronizedBenchmark.cpp"],
     headers = [],
@@ -1681,7 +1809,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "synchronized_ptr_test",
     srcs = ["SynchronizedPtrTest.cpp"],
     headers = [],
@@ -1694,7 +1823,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "synchronized_test_lib",
     headers = [
         "SynchronizedTestLib.h",
@@ -1711,7 +1841,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "test_utils",
     headers = ["TestUtils.h"],
     exported_deps = [
@@ -1724,7 +1855,8 @@ cpp_library(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "thread_cached_int_test",
     srcs = ["ThreadCachedIntTest.cpp"],
     headers = [],
@@ -1742,7 +1874,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "thread_local_benchmark",
     srcs = ["ThreadLocalBenchmark.cpp"],
     headers = [],
@@ -1759,7 +1892,8 @@ cpp_binary(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "thread_local_access_benchmark",
     srcs = ["ThreadLocalAccessBenchmark.cpp"],
     headers = [],
@@ -1769,7 +1903,8 @@ cpp_binary(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "thread_local_destroy_benchmark",
     srcs = ["ThreadLocalDestroyBenchmark.cpp"],
     headers = [],
@@ -1779,7 +1914,8 @@ cpp_binary(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "thread_local_test_lib.so",
     srcs = ["ThreadLocalTestLib.cpp"],
     headers = [],
@@ -1790,7 +1926,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "thread_local_test",
     srcs = ["ThreadLocalTest.cpp"],
     headers = [],
@@ -1816,7 +1953,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "timeout_queue_test",
     srcs = ["TimeoutQueueTest.cpp"],
     headers = [],
@@ -1826,7 +1964,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "token_bucket_test",
     srcs = ["TokenBucketTest.cpp"],
     headers = ["TokenBucketTest.h"],
@@ -1841,7 +1980,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "traits_test",
     srcs = ["TraitsTest.cpp"],
     headers = [],
@@ -1854,7 +1994,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "try_test",
     srcs = ["TryTest.cpp"],
     headers = [],
@@ -1869,7 +2010,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "unit_test",
     srcs = ["UnitTest.cpp"],
     headers = [],
@@ -1879,7 +2021,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "uri_benchmark",
     srcs = ["UriBenchmark.cpp"],
     headers = [],
@@ -1890,7 +2033,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "uri_test",
     srcs = ["UriTest.cpp"],
     headers = [],
@@ -1904,7 +2048,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "utf8_string_test",
     srcs = ["UTF8StringTest.cpp"],
     headers = [],
@@ -1916,7 +2061,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "utility_test",
     srcs = ["UtilityTest.cpp"],
     deps = [
@@ -1926,7 +2072,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "varint_test",
     srcs = ["VarintTest.cpp"],
     headers = [],
@@ -1941,7 +2088,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "json_mock_util",
     headers = [
         "JsonMockUtil.h",
@@ -1951,7 +2099,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "json_test_util",
     headers = [
         "JsonTestUtil.h",
@@ -1961,7 +2110,8 @@ cpp_library(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "test_utils_test",
     srcs = ["TestUtilsTest.cpp"],
     headers = [],
@@ -1972,7 +2122,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "comparison_operator_test_util",
     headers = ["ComparisonOperatorTestUtil.h"],
     exported_deps = [

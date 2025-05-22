@@ -1,9 +1,11 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "async_trace_test",
     srcs = ["AsyncTraceTest.cpp"],
     deps = [
@@ -12,7 +14,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "static_singleton_manager_test",
     srcs = ["StaticSingletonManagerTest.cpp"],
     supports_static_listing = False,
@@ -23,7 +26,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "unique_instance_test",
     srcs = ["UniqueInstanceTest.cpp"],
     deps = [
@@ -34,7 +38,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "file_util_detail_test",
     srcs = [
         "FileUtilDetailTest.cpp",
@@ -45,7 +50,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "perf_scoped_test",
     srcs = [
         "PerfScopedTest.cpp",
@@ -59,7 +65,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "simple_simd_string_utils_test",
     srcs = [
         "SimpleSimdStringUtilsTest.cpp",
@@ -71,7 +78,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "split_string_simd_test",
     srcs = [
         "SplitStringSimdTest.cpp",
@@ -86,7 +94,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "thread_local_detail_test",
     srcs = [
         "ThreadLocalDetailTest.cpp",
@@ -99,7 +108,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "thread_local_benchmark",
     srcs = ["ThreadLocalBenchmark.cpp"],
     deps = [
@@ -109,7 +119,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "traponavx512_test_negative",
     srcs = ["TrapOnAvx512TestNegative.cpp"],
     deps = [
@@ -118,7 +129,20 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
+    name = "tuple_test",
+    srcs = ["tuple_test.cpp"],
+    deps = [
+        "//folly:utility",
+        "//folly/detail:tuple",
+        "//folly/functional:invoke",
+        "//folly/portability:gtest",
+    ],
+)
+
+fbcode_target(
+    _kind = cpp_unittest,
     name = "detail_typelist_test",
     srcs = ["TypeListTest.cpp"],
     deps = [

@@ -1,9 +1,11 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "arena_test",
     srcs = ["ArenaTest.cpp"],
     headers = [],
@@ -22,7 +24,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "mallctl_helper_test",
     srcs = ["MallctlHelperTest.cpp"],
     headers = [],
@@ -39,7 +42,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "malloc_test",
     srcs = ["MallocTest.cpp"],
     headers = [],
@@ -51,7 +55,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "malloc_benchmark",
     srcs = ["MallocBenchmark.cpp"],
     headers = [],
@@ -62,7 +67,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "memory_resource_test",
     srcs = ["MemoryResourceTest.cpp"],
     headers = [],
@@ -72,7 +78,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "not_null_test",
     srcs = [
         "not_null_test.cpp",
@@ -85,7 +92,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "reentrant_allocator_test",
     srcs = ["ReentrantAllocatorTest.cpp"],
     deps = [
@@ -96,7 +104,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "sanitize_address_test",
     srcs = ["SanitizeAddressTest.cpp"],
     deps = [
@@ -106,7 +115,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "sanitize_leak_test",
     srcs = ["SanitizeLeakTest.cpp"],
     deps = [
@@ -115,7 +125,18 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
+    name = "shared_from_this_ptr_test",
+    srcs = ["shared_from_this_ptr_test.cpp"],
+    deps = [
+        "//folly/memory:shared_from_this_ptr",
+        "//folly/portability:gtest",
+    ],
+)
+
+fbcode_target(
+    _kind = cpp_unittest,
     name = "thread_cached_arena_test",
     srcs = ["ThreadCachedArenaTest.cpp"],
     headers = [],
@@ -132,7 +153,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "uninitialized_memory_hacks_test",
     srcs = [
         "UninitializedMemoryHacksODR.cpp",

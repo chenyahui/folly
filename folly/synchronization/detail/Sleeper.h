@@ -34,23 +34,36 @@ namespace detail {
  */
 class Sleeper {
   const std::chrono::nanoseconds delta;
-  uint32_t spinCount;
 
-  static constexpr uint32_t kMaxActiveSpin = 4000;
+  static constexpr uint32_t kMaxActiveSpin = 4096;
+  static constexpr bool useBackOff = kIsArchAArch64 && !kIsMobile;
+
+  uint32_t spinCount = 0;
+
+  uint32_t spinCountTarget = 1;
 
  public:
   static constexpr std::chrono::nanoseconds kMinYieldingSleep =
       std::chrono::microseconds(500);
 
-  constexpr Sleeper() noexcept : delta(kMinYieldingSleep), spinCount(0) {}
+  constexpr Sleeper() noexcept : delta(kMinYieldingSleep) {}
 
-  explicit Sleeper(std::chrono::nanoseconds d) noexcept
-      : delta(d), spinCount(0) {}
+  explicit Sleeper(std::chrono::nanoseconds d) noexcept : delta(d) {}
 
   void wait() noexcept {
-    if (spinCount < kMaxActiveSpin) {
-      ++spinCount;
-      asm_volatile_pause();
+    bool doSpin = useBackOff
+        ? spinCountTarget <= kMaxActiveSpin
+        : spinCount < kMaxActiveSpin;
+    if (doSpin) {
+      if constexpr (useBackOff) {
+        do {
+          asm_volatile_pause();
+        } while (++spinCount < spinCountTarget);
+        spinCountTarget <<= 1;
+      } else {
+        ++spinCount;
+        asm_volatile_pause();
+      }
     } else {
       /* sleep override */
       std::this_thread::sleep_for(delta);

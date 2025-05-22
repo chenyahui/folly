@@ -1,13 +1,50 @@
+load("@fbcode//folly/io/async/test/certs:defs.bzl", "alias_pem")
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
-load("//folly/io/async/test/certs:defs.bzl", "alias_pem")
+load("@fbsource//xplat/folly:defs.bzl", "folly_xplat_cxx_test")
 
 oncall("fbcode_entropy_wardens_folly")
 
-alias_pem(pems = [
-    "tests-cert.pem",
-])
+non_fbcode_target(
+    _kind = folly_xplat_cxx_test,
+    name = "ssl_errors_test",
+    srcs = ["SSLErrorsTest.cpp"],
+    contacts = ["oncall+secure_pipes@xmail.facebook.com"],
+    raw_headers = [],
+    deps = [
+        "//xplat/folly:portability_gtest",
+        "//xplat/folly:portability_openssl",
+        "//xplat/folly/io/async/ssl:ssl_errors",
+    ],
+)
 
-cpp_unittest(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_test,
+    name = "basic_transport_certificate_test",
+    srcs = [
+        # "BasicTransportCertificateTest.cpp",
+    ],
+    contacts = ["oncall+secure_pipes@xmail.facebook.com"],
+    raw_headers = [],
+    deps = [
+        "//xplat/folly:file_util",
+        "//xplat/folly:portability_gtest",
+        "//xplat/folly/io/async/ssl:basic_transport_certificate",
+        "//xplat/folly/ssl:openssl_cert_utils",
+    ],
+)
+
+# !!!! fbcode/folly/io/async/ssl/test/TARGETS was merged into this file, see https://fburl.com/workplace/xl8l9yuo for more info !!!!
+
+fbcode_target(
+    _kind = alias_pem,
+    pems = [
+        "tests-cert.pem",
+    ],
+)
+
+fbcode_target(
+    _kind = cpp_unittest,
     name = "ssl_errors_test",
     srcs = ["SSLErrorsTest.cpp"],
     headers = [],
@@ -19,7 +56,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "basic_transport_certificate_test",
     srcs = ["BasicTransportCertificateTest.cpp"],
     headers = [],
@@ -36,7 +74,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "openssl_utils_test",
     srcs = ["OpenSSLUtilsTest.cpp"],
     headers = [],

@@ -15,7 +15,9 @@
  */
 
 #include <exception>
+#include <type_traits>
 
+#include <folly/Utility.h>
 #include <folly/debugging/exception_tracer/ExceptionAbi.h>
 #include <folly/debugging/exception_tracer/ExceptionTracer.h>
 #include <folly/debugging/exception_tracer/ExceptionTracerLib.h>
@@ -24,7 +26,7 @@
 
 #if FOLLY_HAVE_ELF && FOLLY_HAVE_DWARF
 
-#if defined(__GLIBCXX__)
+#if FOLLY_HAS_EXCEPTION_TRACER
 
 using namespace folly::exception_tracer;
 
@@ -36,6 +38,11 @@ thread_local bool invalid;
 
 thread_local StackTraceStack uncaughtExceptions;
 thread_local StackTraceStack caughtExceptions;
+
+// StackTraceStack should be usable as thread_local for the entire lifetime of
+// a thread, and not just up until thread_local variables are destroyed
+static_assert(std::is_trivially_destructible_v<StackTraceStack>);
+static_assert(folly::is_constexpr_default_constructible_v<StackTraceStack>);
 
 } // namespace
 
@@ -74,19 +81,19 @@ void moveTopException(StackTraceStack& from, StackTraceStack& to) {
 struct Initializer {
   Initializer() {
     registerCxaThrowCallback(
-        [](void*, std::type_info*, void (**)(void*)) noexcept {
+        *+[](void*, std::type_info*, void (**)(void*)) noexcept {
           addActiveException();
         });
 
-    registerCxaBeginCatchCallback([](void*) noexcept {
+    registerCxaBeginCatchCallback(*+[](void*) noexcept {
       moveTopException(uncaughtExceptions, caughtExceptions);
     });
 
-    registerCxaRethrowCallback([]() noexcept {
+    registerCxaRethrowCallback(*+[]() noexcept {
       moveTopException(caughtExceptions, uncaughtExceptions);
     });
 
-    registerCxaEndCatchCallback([]() noexcept {
+    registerCxaEndCatchCallback(*+[]() noexcept {
       if (invalid) {
         return;
       }
@@ -108,7 +115,7 @@ struct Initializer {
       }
     });
 
-    registerRethrowExceptionCallback([](std::exception_ptr) noexcept {
+    registerRethrowExceptionCallback(*+[](std::exception_ptr) noexcept {
       addActiveException();
     });
 
@@ -123,6 +130,6 @@ Initializer initializer;
 
 } // namespace
 
-#endif // defined(__GLIBCXX__)
+#endif //  FOLLY_HAS_EXCEPTION_TRACER
 
 #endif // FOLLY_HAVE_ELF && FOLLY_HAVE_DWARF

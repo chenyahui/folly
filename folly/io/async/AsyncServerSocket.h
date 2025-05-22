@@ -366,7 +366,7 @@ class AsyncServerSocket : public DelayedDestruction, public AsyncSocketBase {
   /**
    * sets the callback assign function
    */
-  void setCallbackAssignFunction(CallbackAssignFunction&& func) {
+  void setCallbackAssignFunction(CallbackAssignFunction func) {
     callbackAssignFunc_ = std::move(func);
   }
 
@@ -780,6 +780,20 @@ class AsyncServerSocket : public DelayedDestruction, public AsyncSocketBase {
   bool getReusePortEnabled_() const { return reusePortEnabled_; }
 
   /**
+   * Set whether or not IP_FREEBIND is enabled on the server socket. Only
+   * supported on Linux.
+   *
+   * NOTE: This socket option only makes sense as a pre-bind operation. Setting
+   * it to an existing bound socket will have no effect.
+   */
+  void setIPFreebind(bool enable);
+
+  /**
+   * Get whether or not IP_FREEBIND is enabled on the server socket.
+   */
+  bool getIPFreebindEnabled() const { return ipFreebind_; }
+
+  /**
    * Set whether or not the socket should close during exec() (FD_CLOEXEC). By
    * default, this is enabled
    */
@@ -946,6 +960,10 @@ class AsyncServerSocket : public DelayedDestruction, public AsyncSocketBase {
     if (callbackAssignFunc_ && socket != NetworkSocket()) {
       auto num = callbackAssignFunc_(this, socket);
       if (num >= 0) {
+        if (auto it = napiIdToCallback_.find(num);
+            it != napiIdToCallback_.end()) {
+          return &it->second;
+        }
         return &callbacks_[num % callbacks_.size()];
       }
     }
@@ -1016,12 +1034,14 @@ class AsyncServerSocket : public DelayedDestruction, public AsyncSocketBase {
   uint32_t callbackIndex_;
   BackoffTimeout* backoffTimeout_;
   std::vector<CallbackInfo> callbacks_;
+  std::unordered_map<unsigned int, CallbackInfo> napiIdToCallback_;
   CallbackAssignFunction callbackAssignFunc_;
   int localCallbackIndex_{-1};
   bool keepAliveEnabled_;
   bool reusePortEnabled_{false};
   // SO_REUSEADDR is enabled by default
   bool enableReuseAddr_{true};
+  bool ipFreebind_{false};
   bool closeOnExec_;
   bool tfo_{false};
   bool noTransparentTls_{false};

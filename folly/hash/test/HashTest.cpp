@@ -40,50 +40,50 @@ TEST(Hash, Test128To64) {
       commutative_hash_128_to_64(lower, upper));
 }
 
-TEST(Hash, Fnv32) {
+TEST(Hash, Fnv32_BROKEN) {
   const char* s1 = "hello, world!";
   const uint32_t s1_res = 3605494790UL;
-  EXPECT_EQ(fnv32(s1), s1_res);
-  EXPECT_EQ(fnv32(s1), fnv32_buf(s1, strlen(s1)));
+  EXPECT_EQ(fnv32_BROKEN(s1), s1_res);
+  EXPECT_EQ(fnv32_BROKEN(s1), fnv32_buf_BROKEN(s1, strlen(s1)));
 
   const char* s2 = "monkeys! m0nk3yz! ev3ry \\/\\/here~~~~";
   const uint32_t s2_res = 1270448334UL;
-  EXPECT_EQ(fnv32(s2), s2_res);
-  EXPECT_EQ(fnv32(s2), fnv32_buf(s2, strlen(s2)));
+  EXPECT_EQ(fnv32_BROKEN(s2), s2_res);
+  EXPECT_EQ(fnv32_BROKEN(s2), fnv32_buf_BROKEN(s2, strlen(s2)));
 
   const char* s3 = "";
   const uint32_t s3_res = 2166136261UL;
-  EXPECT_EQ(fnv32(s3), s3_res);
-  EXPECT_EQ(fnv32(s3), fnv32_buf(s3, strlen(s3)));
+  EXPECT_EQ(fnv32_BROKEN(s3), s3_res);
+  EXPECT_EQ(fnv32_BROKEN(s3), fnv32_buf_BROKEN(s3, strlen(s3)));
 
   const uint8_t s4_data[] = {0xFF, 0xFF, 0xFF, 0x00};
   const char* s4 = reinterpret_cast<const char*>(s4_data);
   const uint32_t s4_res = 2420936562UL;
-  EXPECT_EQ(fnv32(s4), s4_res);
-  EXPECT_EQ(fnv32(s4), fnv32_buf(s4, strlen(s4)));
+  EXPECT_EQ(fnv32_BROKEN(s4), s4_res);
+  EXPECT_EQ(fnv32_BROKEN(s4), fnv32_buf_BROKEN(s4, strlen(s4)));
 }
 
-TEST(Hash, Fnv64) {
+TEST(Hash, Fnv64_BROKEN) {
   const char* s1 = "hello, world!";
   const uint64_t s1_res = 13991426986746681734ULL;
-  EXPECT_EQ(fnv64(s1), s1_res);
-  EXPECT_EQ(fnv64(s1), fnv64_buf(s1, strlen(s1)));
+  EXPECT_EQ(fnv64_BROKEN(s1), s1_res);
+  EXPECT_EQ(fnv64_BROKEN(s1), fnv64_buf_BROKEN(s1, strlen(s1)));
 
   const char* s2 = "monkeys! m0nk3yz! ev3ry \\/\\/here~~~~";
   const uint64_t s2_res = 6091394665637302478ULL;
-  EXPECT_EQ(fnv64(s2), s2_res);
-  EXPECT_EQ(fnv64(s2), fnv64_buf(s2, strlen(s2)));
+  EXPECT_EQ(fnv64_BROKEN(s2), s2_res);
+  EXPECT_EQ(fnv64_BROKEN(s2), fnv64_buf_BROKEN(s2, strlen(s2)));
 
   const char* s3 = "";
   const uint64_t s3_res = 14695981039346656037ULL;
-  EXPECT_EQ(fnv64(s3), s3_res);
-  EXPECT_EQ(fnv64(s3), fnv64_buf(s3, strlen(s3)));
+  EXPECT_EQ(fnv64_BROKEN(s3), s3_res);
+  EXPECT_EQ(fnv64_BROKEN(s3), fnv64_buf_BROKEN(s3, strlen(s3)));
 
   const uint8_t s4_data[] = {0xFF, 0xFF, 0xFF, 0x00};
   const char* s4 = reinterpret_cast<const char*>(s4_data);
   const uint64_t s4_res = 2787597222566293202ULL;
-  EXPECT_EQ(fnv64(s4), s4_res);
-  EXPECT_EQ(fnv64(s4), fnv64_buf(s4, strlen(s4)));
+  EXPECT_EQ(fnv64_BROKEN(s4), s4_res);
+  EXPECT_EQ(fnv64_BROKEN(s4), fnv64_buf_BROKEN(s4, strlen(s4)));
 
   // note: Use fnv64_buf to make a single hash value from multiple
   // fields/datatypes.
@@ -92,12 +92,79 @@ TEST(Hash, Fnv64) {
   int32_t t4_c = 0xAB12CD34;
   const char* t4_d = "Unum";
   uint64_t t4_res = 15571330457339273965ULL;
-  uint64_t t4_hash1 = fnv64_buf(t4_a, strlen(t4_a));
-  uint64_t t4_hash2 =
-      fnv64_buf(reinterpret_cast<void*>(&t4_b), sizeof(int64_t), t4_hash1);
-  uint64_t t4_hash3 =
-      fnv64_buf(reinterpret_cast<void*>(&t4_c), sizeof(int32_t), t4_hash2);
-  uint64_t t4_hash4 = fnv64_buf(t4_d, strlen(t4_d), t4_hash3);
+  uint64_t t4_hash1 = fnv64_buf_BROKEN(t4_a, strlen(t4_a));
+  uint64_t t4_hash2 = fnv64_buf_BROKEN(
+      reinterpret_cast<void*>(&t4_b), sizeof(int64_t), t4_hash1);
+  uint64_t t4_hash3 = fnv64_buf_BROKEN(
+      reinterpret_cast<void*>(&t4_c), sizeof(int32_t), t4_hash2);
+  uint64_t t4_hash4 = fnv64_buf_BROKEN(t4_d, strlen(t4_d), t4_hash3);
+  EXPECT_EQ(t4_hash4, t4_res);
+  // note: These are probabalistic, not determinate, but c'mon.
+  // These hash values should be different, or something's not
+  // working.
+  EXPECT_NE(t4_hash1, t4_hash4);
+  EXPECT_NE(t4_hash2, t4_hash4);
+  EXPECT_NE(t4_hash3, t4_hash4);
+}
+
+TEST(Hash, Fnv32_FIXED) {
+  const char* s1 = "hello, world!";
+  const uint32_t s1_res = 3605494790U;
+  EXPECT_EQ(fnv32_FIXED(s1), s1_res);
+  EXPECT_EQ(fnv32_FIXED(s1), fnv32_buf_FIXED(s1, strlen(s1)));
+
+  const char* s2 = "monkeys! m0nk3yz! ev3ry \\/\\/here~~~~";
+  const uint32_t s2_res = 1270448334U;
+  EXPECT_EQ(fnv32_FIXED(s2), s2_res);
+  EXPECT_EQ(fnv32_FIXED(s2), fnv32_buf_FIXED(s2, strlen(s2)));
+
+  const char* s3 = "";
+  const uint32_t s3_res = 2166136261U;
+  EXPECT_EQ(fnv32_FIXED(s3), s3_res);
+  EXPECT_EQ(fnv32_FIXED(s3), fnv32_buf_FIXED(s3, strlen(s3)));
+
+  const uint8_t s4_data[] = {0xFF, 0xFF, 0xFF, 0x00};
+  const char* s4 = reinterpret_cast<const char*>(s4_data);
+  const uint32_t s4_res = 2978929266U;
+  EXPECT_EQ(fnv32_FIXED(s4), s4_res);
+  EXPECT_EQ(fnv32_FIXED(s4), fnv32_buf_FIXED(s4, strlen(s4)));
+}
+
+TEST(Hash, Fnv64_FIXED) {
+  const char* s1 = "hello, world!";
+  const uint64_t s1_res = 13991426986746681734ULL;
+  EXPECT_EQ(fnv64_FIXED(s1), s1_res);
+  EXPECT_EQ(fnv64_FIXED(s1), fnv64_buf_FIXED(s1, strlen(s1)));
+
+  const char* s2 = "monkeys! m0nk3yz! ev3ry \\/\\/here~~~~";
+  const uint64_t s2_res = 6091394665637302478ULL;
+  EXPECT_EQ(fnv64_FIXED(s2), s2_res);
+  EXPECT_EQ(fnv64_FIXED(s2), fnv64_buf_FIXED(s2, strlen(s2)));
+
+  const char* s3 = "";
+  const uint64_t s3_res = 14695981039346656037ULL;
+  EXPECT_EQ(fnv64_FIXED(s3), s3_res);
+  EXPECT_EQ(fnv64_FIXED(s3), fnv64_buf_FIXED(s3, strlen(s3)));
+
+  const uint8_t s4_data[] = {0xFF, 0xFF, 0xFF, 0x00};
+  const char* s4 = reinterpret_cast<const char*>(s4_data);
+  const uint64_t s4_res = 15475554797547429842ULL;
+  EXPECT_EQ(fnv64_FIXED(s4), s4_res);
+  EXPECT_EQ(fnv64_FIXED(s4), fnv64_buf_FIXED(s4, strlen(s4)));
+
+  // note: Use fnv64_buf to make a single hash value from multiple
+  // fields/datatypes.
+  const char* t4_a = "E Pluribus";
+  int64_t t4_b = 0xF1E2D3C4B5A69788;
+  int32_t t4_c = 0xAB12CD34;
+  const char* t4_d = "Unum";
+  uint64_t t4_res = 14526396152295369453ULL;
+  uint64_t t4_hash1 = fnv64_buf_FIXED(t4_a, strlen(t4_a));
+  uint64_t t4_hash2 = fnv64_buf_FIXED(
+      reinterpret_cast<void*>(&t4_b), sizeof(int64_t), t4_hash1);
+  uint64_t t4_hash3 = fnv64_buf_FIXED(
+      reinterpret_cast<void*>(&t4_c), sizeof(int32_t), t4_hash2);
+  uint64_t t4_hash4 = fnv64_buf_FIXED(t4_d, strlen(t4_d), t4_hash3);
   EXPECT_EQ(t4_hash4, t4_res);
   // note: These are probabalistic, not determinate, but c'mon.
   // These hash values should be different, or something's not
@@ -688,23 +755,46 @@ TEST(Hash, Pointer) {
           value));
 }
 
+template <typename T>
 struct FNVTestParam {
   std::string in;
-  uint64_t out;
+  T out;
 };
+using FNV32TestParam = FNVTestParam<uint32_t>;
+using FNV64TestParam = FNVTestParam<uint64_t>;
 
-class FNVTest : public ::testing::TestWithParam<FNVTestParam> {};
+class FNV32Test : public ::testing::TestWithParam<FNV32TestParam> {};
+class FNV64Test : public ::testing::TestWithParam<FNV64TestParam> {};
 
-TEST_P(FNVTest, Fnva64Buf) {
+TEST_P(FNV32Test, Fnva32Buf) {
+  EXPECT_EQ(
+      GetParam().out, fnva32_buf(GetParam().in.data(), GetParam().in.size()));
+}
+
+TEST_P(FNV64Test, Fnva64Buf) {
   EXPECT_EQ(
       GetParam().out, fnva64_buf(GetParam().in.data(), GetParam().in.size()));
 }
 
-TEST_P(FNVTest, Fnva64) {
+TEST_P(FNV32Test, Fnva32) {
+  EXPECT_EQ(GetParam().out, fnva32(GetParam().in));
+}
+
+TEST_P(FNV64Test, Fnva64) {
   EXPECT_EQ(GetParam().out, fnva64(GetParam().in));
 }
 
-TEST_P(FNVTest, Fnva64Partial) {
+TEST_P(FNV32Test, Fnva32Partial) {
+  size_t partialLen = GetParam().in.size() / 2;
+  auto data = GetParam().in.data();
+  auto partial = fnva32_buf(data, partialLen);
+  EXPECT_EQ(
+      GetParam().out,
+      fnva32_buf(
+          data + partialLen, GetParam().in.size() - partialLen, partial));
+}
+
+TEST_P(FNV64Test, Fnva64Partial) {
   size_t partialLen = GetParam().in.size() / 2;
   auto data = GetParam().in.data();
   auto partial = fnva64_buf(data, partialLen);
@@ -716,22 +806,43 @@ TEST_P(FNVTest, Fnva64Partial) {
 
 // Taken from http://www.isthe.com/chongo/src/fnv/test_fnv.c
 INSTANTIATE_TEST_SUITE_P(
-    FNVTesting,
-    FNVTest,
+    FNV32Testing,
+    FNV32Test,
     ::testing::Values(
-        FNVTestParam{
+        FNV32TestParam{
+            "foobar", // 11
+            0xbf9cf968},
+        FNV32TestParam{
+            "chongo was here!\n", // 39
+            0xd49930d5},
+        FNV32TestParam{
+            "127.0.0.3", // 106,
+            0x06a3cdf8},
+        FNV32TestParam{
+            "http://en.wikipedia.org/wiki/Fowler_Noll_Vo_hash", // 126
+            0xdd16ef45},
+        FNV32TestParam{
+            "http://norvig.com/21-days.html", // 136
+            0xeb08bfba}));
+
+// Taken from http://www.isthe.com/chongo/src/fnv/test_fnv.c
+INSTANTIATE_TEST_SUITE_P(
+    FNV64Testing,
+    FNV64Test,
+    ::testing::Values(
+        FNV64TestParam{
             "foobar", // 11
             0x85944171f73967e8},
-        FNVTestParam{
+        FNV64TestParam{
             "chongo was here!\n", // 39
             0x46810940eff5f915},
-        FNVTestParam{
+        FNV64TestParam{
             "127.0.0.3", // 106,
             0xaabafc7104d91158},
-        FNVTestParam{
+        FNV64TestParam{
             "http://en.wikipedia.org/wiki/Fowler_Noll_Vo_hash", // 126
             0xd9b957fb7fe794c5},
-        FNVTestParam{
+        FNV64TestParam{
             "http://norvig.com/21-days.html", // 136
             0x07aaa640476e0b9a}));
 

@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "wait_utils",
     headers = [
         "WaitUtils.h",
@@ -15,7 +17,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "core",
     srcs = ["Async.cpp"],
     headers = [
@@ -35,7 +38,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "collect",
     headers = [
         "Collect.h",
@@ -54,7 +58,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "baton",
     headers = ["Baton.h"],
     exported_deps = [
@@ -66,7 +71,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "fiber_manager",
     headers = [
         "FiberManager.h",
@@ -77,7 +83,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "future",
     headers = [
         "Future.h",
@@ -88,7 +95,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "promise",
     headers = [
         "Promise.h",
@@ -100,7 +108,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "task",
     headers = [
         "Task.h",
@@ -112,7 +121,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "stack_tracing",
     headers = [
         "AsyncStack.h",

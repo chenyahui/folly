@@ -1,11 +1,33 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
+load("@fbsource//tools/build_defs:default_platform_defs.bzl", "ANDROID", "APPLE", "CXX", "FBCODE", "WINDOWS")
+load("@fbsource//tools/build_defs:fb_xplat_cxx_library.bzl", "fb_xplat_cxx_library")
+load("@fbsource//tools/build_defs:glob_defs.bzl", "subdir_glob")
+load("@fbsource//xplat/folly:defs.bzl", "DEFAULT_APPLE_SDKS")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+non_fbcode_target(
+    _kind = fb_xplat_cxx_library,
+    name = "test-headers",
+    header_namespace = "",
+    exported_headers = subdir_glob(
+        [
+            ("", "**/*.h"),
+        ],
+        prefix = "folly/concurrency/test",
+    ),
+    apple_sdks = DEFAULT_APPLE_SDKS,
+    force_static = True,
+    platforms = (ANDROID, APPLE, CXX, FBCODE, WINDOWS),
+    visibility = ["PUBLIC"],
+)
+
+fbcode_target(
+    _kind = cpp_unittest,
     name = "async_file_writer_test",
     srcs = ["AsyncFileWriterTest.cpp"],
     deps = [
@@ -32,7 +54,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "async_log_writer_test",
     srcs = ["AsyncLogWriterTest.cpp"],
     deps = [
@@ -43,7 +66,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "config_parser_test",
     srcs = ["ConfigParserTest.cpp"],
     deps = [
@@ -58,7 +82,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "config_update_test",
     srcs = ["ConfigUpdateTest.cpp"],
     deps = [
@@ -74,7 +99,8 @@ cpp_unittest(
     ],
 )
 
-python_unittest(
+fbcode_target(
+    _kind = python_unittest,
     name = "fatal_test",
     srcs = ["fatal_test.py"],
     env = {
@@ -82,7 +108,8 @@ python_unittest(
     },
 )
 
-python_unittest(
+fbcode_target(
+    _kind = python_unittest,
     name = "log_after_main",
     srcs = ["log_after_main.py"],
     env = {
@@ -91,7 +118,8 @@ python_unittest(
     },
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "file_handler_factory_test",
     srcs = ["FileHandlerFactoryTest.cpp"],
     deps = [
@@ -104,7 +132,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "custom_log_formatter_test",
     srcs = ["CustomLogFormatterTest.cpp"],
     deps = [
@@ -117,7 +146,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "glog_formatter_test",
     srcs = ["GlogFormatterTest.cpp"],
     deps = [
@@ -131,7 +161,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "immediate_file_writer_test",
     srcs = ["ImmediateFileWriterTest.cpp"],
     deps = [
@@ -146,7 +177,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "init_test",
     srcs = ["InitTest.cpp"],
     deps = [
@@ -159,7 +191,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "log_category_test",
     srcs = ["LogCategoryTest.cpp"],
     deps = [
@@ -170,7 +203,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "logger_db_test",
     srcs = ["LoggerDBTest.cpp"],
     deps = [
@@ -180,7 +214,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "logger_test",
     srcs = ["LoggerTest.cpp"],
     deps = [
@@ -194,7 +229,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "log_level_test",
     srcs = ["LogLevelTest.cpp"],
     deps = [
@@ -205,7 +241,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "log_message_test",
     srcs = ["LogMessageTest.cpp"],
     deps = [
@@ -215,7 +252,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "log_name_test",
     srcs = ["LogNameTest.cpp"],
     deps = [
@@ -224,7 +262,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "log_stream_test",
     srcs = ["LogStreamTest.cpp"],
     deps = [
@@ -233,7 +272,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "rate_limiter_test",
     srcs = ["RateLimiterTest.cpp"],
     deps = [
@@ -243,7 +283,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "standard_log_handler_test",
     srcs = ["StandardLogHandlerTest.cpp"],
     deps = [
@@ -255,7 +296,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "config_helpers",
     srcs = ["ConfigHelpers.cpp"],
     headers = ["ConfigHelpers.h"],
@@ -267,7 +309,8 @@ cpp_library(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "sync_level_test",
     srcs = ["SyncLevelTest.cpp"],
     deps = [
@@ -278,7 +321,8 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "test_handler",
     srcs = ["TestLogHandler.cpp"],
     headers = ["TestLogHandler.h"],
@@ -291,7 +335,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "xlog_test_lib",
     srcs = [
         "XlogFile1.cpp",
@@ -307,7 +352,8 @@ cpp_library(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "xlog_bench",
     srcs = ["XlogBench.cpp"],
     deps = [
@@ -324,7 +370,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "xlog_test",
     srcs = ["XlogTest.cpp"],
     deps = [
@@ -340,7 +387,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "standard_log_handler_factory_test",
     srcs = ["StandardLogHandlerFactoryTest.cpp"],
     deps = [
@@ -352,7 +400,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "bridge_from_google_logging_test",
     srcs = ["BridgeFromGoogleLoggingTest.cpp"],
     deps = [
@@ -366,7 +415,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "auto_timer_test",
     srcs = ["AutoTimerTest.cpp"],
     headers = [],

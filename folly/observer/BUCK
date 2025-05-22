@@ -1,8 +1,92 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load(
+    "@fbsource//xplat/folly:defs.bzl",
+    "folly_xplat_library",
+)
+load("@fbsource//xplat/pfh/triage_InfrastructureSupermoduleOptou:DEFS.bzl", "triage_InfrastructureSupermoduleOptou")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "observable",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Observable.h",
+        "Observable-inl.h",
+    ],
+    deps = [
+        "//xplat/folly/experimental/observer:observer",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "with_jitter",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "WithJitter.h",
+        "WithJitter-inl.h",
+    ],
+    deps = [
+        "//xplat/folly:default_keep_alive_executor",
+        "//xplat/folly:futures",
+        "//xplat/folly:random",
+        "//xplat/folly:synchronized",
+        "//xplat/folly/executors:global_executor",
+        "//xplat/folly/experimental/observer:observable",
+        "//xplat/folly/experimental/observer:observer",
+    ],
+    exported_deps = [
+        "//third-party/fmt:fmt",
+        "//third-party/glog:glog",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "observer",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "CoreCachedObserver.h",
+        "HazptrObserver.h",
+        "Observer.h",
+        "Observer-inl.h",
+        "Observer-pre.h",
+        "ReadMostlyTLObserver.h",
+    ],
+    deps = [
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly:shared_mutex",
+        "//xplat/folly:synchronization_baton",
+        "//xplat/folly:thread_local",
+        "//xplat/folly/concurrency:core_cached_shared_ptr",
+        "//xplat/folly/experimental/observer/detail:observer_manager",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_library,
+    name = "simple_observable",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "SimpleObservable.h",
+        "SimpleObservable-inl.h",
+    ],
+    deps = [
+        "//xplat/folly:function",
+        "//xplat/folly:synchronization_delayed_init",
+        "//xplat/folly:synchronized",
+        "//xplat/folly/experimental/observer:observable",
+        "//xplat/folly/experimental/observer:observer",
+    ],
+)
+
+# !!!! fbcode/folly/observer/TARGETS was merged into this file, see https://fburl.com/workplace/xl8l9yuo for more info !!!!
+
+fbcode_target(
+    _kind = cpp_library,
     name = "observable",
     headers = [
         "Observable.h",
@@ -14,7 +98,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "observer",
     headers = [
         "Observer.h",
@@ -30,7 +115,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "hazptr_observer",
     headers = [
         "HazptrObserver.h",
@@ -43,7 +129,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "read_mostly_tl_observer",
     headers = [
         "ReadMostlyTLObserver.h",
@@ -55,7 +142,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "core_cached_observer",
     headers = [
         "CoreCachedObserver.h",
@@ -67,7 +155,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "simple_observable",
     headers = [
         "SimpleObservable.h",
@@ -82,7 +171,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "with_jitter",
     headers = [
         "WithJitter.h",

@@ -31,7 +31,6 @@
 #include <folly/memory/Malloc.h>
 #include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
-#include <folly/small_vector.h>
 #include <folly/sorted_vector_types.h>
 
 using folly::sorted_vector_map;
@@ -75,6 +74,11 @@ static_assert(std::is_same_v<
 static_assert(std::is_same_v<
               folly::sorted_vector_map<int, double>::const_pointer,
               const std::pair<int, double>*>);
+
+static_assert(folly::is_small_sorted_vector_map_v<
+              folly::small_sorted_vector_map<int, double, 5>>);
+static_assert(folly::is_small_sorted_vector_set_v<
+              folly::small_sorted_vector_set<int, 5>>);
 
 template <class T>
 struct less_invert {
@@ -1012,30 +1016,17 @@ TEST(SortedVectorTypes, TestMapCreationFromVector) {
 }
 
 TEST(SortedVectorTypes, TestSetCreationFromSmallVector) {
-  using smvec = folly::small_vector<int, 5>;
-  smvec vec = {3, 1, -1, 5, 0};
-  sorted_vector_set<
-      int,
-      std::less<int>,
-      std::allocator<std::pair<int, int>>,
-      void,
-      smvec>
-      vset(std::move(vec));
+  using ssvs = folly::small_sorted_vector_set<int, 5>;
+  ssvs::container_type vec = {3, 1, -1, 5, 0};
+  ssvs vset(std::move(vec));
   check_invariant(vset);
   EXPECT_THAT(vset, testing::ElementsAreArray({-1, 0, 1, 3, 5}));
 }
 
 TEST(SortedVectorTypes, TestMapCreationFromSmallVector) {
-  using smvec = folly::small_vector<std::pair<int, int>, 5>;
-  smvec vec = {{3, 1}, {1, 5}, {-1, 2}, {5, 3}, {0, 3}};
-  sorted_vector_map<
-      int,
-      int,
-      std::less<int>,
-      std::allocator<std::pair<int, int>>,
-      void,
-      smvec>
-      vmap(std::move(vec));
+  using ssvm = folly::small_sorted_vector_map<int, int, 5>;
+  ssvm::container_type vec = {{3, 1}, {1, 5}, {-1, 2}, {5, 3}, {0, 3}};
+  ssvm vmap(std::move(vec));
   check_invariant(vmap);
   auto contents = std::vector<std::pair<int, int>>(vmap.begin(), vmap.end());
   auto expected_contents = std::vector<std::pair<int, int>>({
@@ -1133,10 +1124,10 @@ TEST(SortedVectorTypes, TestExceptionSafety) {
 
 #if FOLLY_HAS_MEMORY_RESOURCE
 
-using folly::detail::std_pmr::memory_resource;
-using folly::detail::std_pmr::new_delete_resource;
-using folly::detail::std_pmr::null_memory_resource;
-using folly::detail::std_pmr::polymorphic_allocator;
+using std::pmr::memory_resource;
+using std::pmr::new_delete_resource;
+using std::pmr::null_memory_resource;
+using std::pmr::polymorphic_allocator;
 
 namespace {
 
@@ -1292,8 +1283,7 @@ TEST(SortedVectorTypes, TestPmrMoveConstructDifferentAlloc) {
 }
 
 template <typename T>
-using pmr_vector =
-    std::vector<T, folly::detail::std_pmr::polymorphic_allocator<T>>;
+using pmr_vector = std::vector<T, std::pmr::polymorphic_allocator<T>>;
 
 TEST(SortedVectorTypes, TestCreationFromPmrVector) {
   namespace pmr = folly::pmr;
@@ -1587,4 +1577,88 @@ TEST(SortedVectorTypes, TestGetContainer) {
   sorted_vector_map<int, int> map;
   EXPECT_TRUE(set.get_container().empty());
   EXPECT_TRUE(map.get_container().empty());
+}
+
+TEST(SortedVectorTypes, Comparisons) {
+  sorted_vector_set<int> set1{1, 2, 3};
+  sorted_vector_set<int> set2{1, 2, 3};
+
+  EXPECT_EQ(set1, set2);
+  EXPECT_FALSE(set1 != set2);
+  EXPECT_FALSE(set1 < set2);
+  EXPECT_TRUE(set1 <= set2);
+  EXPECT_FALSE(set1 > set2);
+  EXPECT_TRUE(set1 >= set2);
+
+#if FOLLY_CPLUSPLUS >= 202002L && defined(__cpp_lib_three_way_comparison)
+  EXPECT_EQ(set1 <=> set2, std::strong_ordering::equal);
+#endif
+
+  set2.insert(4);
+  EXPECT_NE(set1, set2);
+  EXPECT_FALSE(set1 == set2);
+  EXPECT_TRUE(set1 < set2);
+  EXPECT_TRUE(set1 <= set2);
+  EXPECT_FALSE(set1 > set2);
+  EXPECT_FALSE(set1 >= set2);
+
+#if FOLLY_CPLUSPLUS >= 202002L && defined(__cpp_lib_three_way_comparison)
+  EXPECT_EQ(set1 <=> set2, std::strong_ordering::less);
+  EXPECT_EQ(set2 <=> set1, std::strong_ordering::greater);
+#endif
+
+  sorted_vector_map<int, int> map1{{1, 1}, {2, 2}, {3, 3}};
+  sorted_vector_map<int, int> map2{{1, 1}, {2, 2}, {3, 3}};
+
+  EXPECT_EQ(map1, map2);
+  EXPECT_FALSE(map1 != map2);
+  EXPECT_FALSE(map1 < map2);
+  EXPECT_TRUE(map1 <= map2);
+  EXPECT_FALSE(map1 > map2);
+  EXPECT_TRUE(map1 >= map2);
+
+#if FOLLY_CPLUSPLUS >= 202002L && defined(__cpp_lib_three_way_comparison)
+  EXPECT_EQ(map1 <=> map2, std::strong_ordering::equal);
+#endif
+  map1.insert({4, 4});
+  map2.insert({4, 5});
+
+  EXPECT_NE(map1, map2);
+  EXPECT_FALSE(map1 == map2);
+  EXPECT_TRUE(map1 < map2);
+  EXPECT_TRUE(map1 <= map2);
+  EXPECT_FALSE(map1 > map2);
+  EXPECT_FALSE(map1 >= map2);
+
+#if FOLLY_CPLUSPLUS >= 202002L && defined(__cpp_lib_three_way_comparison)
+  EXPECT_EQ(map1 <=> map2, std::strong_ordering::less);
+  EXPECT_EQ(map2 <=> map1, std::strong_ordering::greater);
+#endif
+}
+
+TEST(SortedVectorTypes, TestSwapContainer) {
+  sorted_vector_set<int> set{1, 2, 3};
+  std::vector<int> swapped{6, 5, 4};
+  set.swap_container(swapped);
+  EXPECT_EQ(swapped, (std::vector<int>{1, 2, 3}));
+  EXPECT_EQ(set.get_container(), (std::vector<int>{4, 5, 6}));
+  swapped = {1, 3};
+  set.swap_container(folly::sorted_unique, swapped);
+  EXPECT_EQ(swapped, (std::vector<int>{4, 5, 6}));
+  EXPECT_EQ(set.get_container(), (std::vector<int>{1, 3}));
+
+  sorted_vector_map<int, int> map{{1, 1}, {2, 2}, {3, 3}};
+  std::vector<std::pair<int, int>> swappedMap{{6, 6}, {5, 5}, {4, 4}};
+  map.swap_container(swappedMap);
+  EXPECT_EQ(
+      swappedMap, (std::vector<std::pair<int, int>>{{1, 1}, {2, 2}, {3, 3}}));
+  EXPECT_EQ(
+      map.get_container(),
+      (std::vector<std::pair<int, int>>{{4, 4}, {5, 5}, {6, 6}}));
+  swappedMap = {{1, 1}, {3, 3}};
+  map.swap_container(folly::sorted_unique, swappedMap);
+  EXPECT_EQ(
+      swappedMap, (std::vector<std::pair<int, int>>{{4, 4}, {5, 5}, {6, 6}}));
+  EXPECT_EQ(
+      map.get_container(), (std::vector<std::pair<int, int>>{{1, 1}, {3, 3}}));
 }

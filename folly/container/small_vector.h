@@ -649,6 +649,15 @@ class small_vector
     return std::lexicographical_compare(begin(), end(), o.begin(), o.end());
   }
 
+#if FOLLY_CPLUSPLUS >= 202002L && defined(__cpp_lib_three_way_comparison)
+  template <typename U = value_type>
+  friend auto operator<=>(const small_vector& lhs, const small_vector& rhs)
+      -> decltype(std::declval<const U&>() <=> std::declval<const U&>()) {
+    return std::lexicographical_compare_three_way(
+        lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+  }
+#endif // FOLLY_CPLUSPLUS >= 202002L && defined(__cpp_lib_three_way_comparison)
+
   static constexpr size_type max_size() {
     return !BaseType::kShouldUseHeap
         ? static_cast<size_type>(MaxInline)
@@ -1474,6 +1483,15 @@ struct IndexableTraits<small_vector<T, M, P>>
     : public IndexableTraitsSeq<small_vector<T, M, P>> {};
 
 } // namespace detail
+
+template <typename>
+struct is_small_vector : std::false_type {};
+
+template <class Value, size_t N, class Policy>
+struct is_small_vector<small_vector<Value, N, Policy>> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_small_vector_v = is_small_vector<T>::value;
 
 } // namespace folly
 

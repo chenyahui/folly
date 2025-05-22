@@ -141,6 +141,7 @@ AsyncServerSocket::AsyncServerSocket(EventBase* eventBase)
       callbackIndex_(0),
       backoffTimeout_(nullptr),
       callbacks_(),
+      napiIdToCallback_(),
       keepAliveEnabled_(true),
       closeOnExec_(true) {
   disableTransparentTls();
@@ -172,6 +173,7 @@ void AsyncServerSocket::setShutdownSocketSet(
 
 AsyncServerSocket::~AsyncServerSocket() {
   assert(callbacks_.empty());
+  assert(napiIdToCallback_.empty());
 }
 
 int AsyncServerSocket::stopAccepting(int shutdownFlags) {
@@ -215,6 +217,7 @@ int AsyncServerSocket::stopAccepting(int shutdownFlags) {
   // removeAcceptCallback().
   std::vector<CallbackInfo> callbacksCopy;
   callbacks_.swap(callbacksCopy);
+  napiIdToCallback_.clear();
   localCallbackIndex_ = -1;
   for (const auto& callback : callbacksCopy) {
     // consumer may not be set if we are running in primary event base
@@ -598,6 +601,11 @@ void AsyncServerSocket::setEnableReuseAddr(bool enable) {
   }
 }
 
+void AsyncServerSocket::setIPFreebind(bool enable) {
+  // We defer setting this option to setupSocket to ensure it is done pre-bind.
+  ipFreebind_ = enable;
+}
+
 void AsyncServerSocket::listen(int backlog) {
   if (eventBase_) {
     eventBase_->dcheckIsInEventBaseThread();
@@ -641,6 +649,13 @@ void AsyncServerSocket::addAcceptCallback(
   bool runStartAccepting = accepting_ && callbacks_.empty();
 
   callbacks_.emplace_back(callback, eventBase);
+  int napiId = -1;
+  if (eventBase) {
+    napiId = eventBase->getBackend()->getNapiId();
+    if (napiId != -1) {
+      napiIdToCallback_.emplace(napiId, CallbackInfo(callback, eventBase));
+    }
+  }
 
   SCOPE_SUCCESS {
     // If this is the first accept callback and we are supposed to be accepting,
@@ -676,6 +691,12 @@ void AsyncServerSocket::addAcceptCallback(
     throw;
   }
   callbacks_.back().consumer = acceptor;
+  if (napiId != -1) {
+    if (auto it = napiIdToCallback_.find(napiId);
+        it != napiIdToCallback_.end()) {
+      it->second.consumer = acceptor;
+    }
+  }
   if (localCallbackIndex_ < 0 && callbacks_.back().eventBase == eventBase_) {
     localCallbackIndex_ = static_cast<int>(callbacks_.size() - 1);
   }
@@ -705,6 +726,19 @@ void AsyncServerSocket::removeAcceptCallback(
     }
     ++it;
     ++n;
+  }
+
+  // If the matching AcceptCallback is also tied to a specific NAPI ID, erase it
+  // as well.
+  for (auto mapIt = napiIdToCallback_.begin();
+       mapIt != napiIdToCallback_.end();) {
+    auto& cb = mapIt->second;
+    if (cb.callback == callback &&
+        (cb.eventBase == eventBase || eventBase == nullptr)) {
+      mapIt = napiIdToCallback_.erase(mapIt);
+    } else {
+      ++mapIt;
+    }
   }
 
   // Remove this callback from callbacks_.
@@ -915,7 +949,13 @@ void AsyncServerSocket::setupSocket(NetworkSocket fd, int family) {
   // Set TCP nodelay if available, MAC OS X Hack
   // See http://lists.danga.com/pipermail/memcached/2005-March/001240.html
 #ifndef TCP_NOPUSH
-  if (family != AF_UNIX) {
+#if FOLLY_HAVE_VSOCK
+  auto isVsock = family == AF_VSOCK;
+#else
+  auto isVsock = false;
+#endif
+
+  if (family != AF_UNIX && !isVsock) {
     if (netops::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) !=
         0) {
       auto errnoCopy = errno;
@@ -947,6 +987,15 @@ void AsyncServerSocket::setupSocket(NetworkSocket fd, int family) {
                    << folly::errnoStr(errnoCopy);
     }
   }
+
+#if defined(__linux__)
+  if (ipFreebind_ &&
+      netops::setsockopt(fd, IPPROTO_IP, IP_FREEBIND, &one, sizeof(int)) != 0) {
+    auto errnoCopy = errno;
+    LOG(ERROR) << "failed to set IP_FREEBIND on async server socket: "
+               << errnoStr(errnoCopy);
+  }
+#endif
 
   if (const auto shutdownSocketSet = wShutdownSocketSet_.lock()) {
     shutdownSocketSet->add(fd);

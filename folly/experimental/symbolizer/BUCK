@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "dwarf",
     headers = [
         "Dwarf.h",
@@ -16,7 +18,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "elf",
     headers = [
         "Elf.h",
@@ -27,7 +30,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "symbolized_frame",
     headers = [
         "SymbolizedFrame.h",
@@ -37,7 +41,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "line_reader",
     headers = [
         "LineReader.h",
@@ -47,7 +52,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "stack_trace",
     headers = [
         "StackTrace.h",
@@ -57,7 +63,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "elf_cache",
     headers = [
         "ElfCache.h",
@@ -67,7 +74,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "symbolize_printer",
     headers = [
         "SymbolizePrinter.h",
@@ -77,7 +85,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "symbolizer",
     headers = [
         "Symbolizer.h",
@@ -87,7 +96,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "signal_handler",
     headers = [
         "SignalHandler.h",

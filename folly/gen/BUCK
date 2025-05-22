@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "base",
     headers = [
         "Base.h",
@@ -23,7 +25,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "combine",
     headers = [
         "Combine.h",
@@ -32,7 +35,8 @@ cpp_library(
     exported_deps = [":base"],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "core",
     headers = [
         "Core.h",
@@ -41,7 +45,8 @@ cpp_library(
     exported_deps = ["//folly:portability"],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "file",
     headers = [
         "File.h",
@@ -56,7 +61,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "parallel",
     headers = [
         "Parallel.h",
@@ -70,7 +76,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "parallel_map",
     headers = [
         "ParallelMap.h",
@@ -85,7 +92,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "string",
     headers = [
         "String.h",
@@ -101,7 +109,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "istream",
     headers = [
         "IStream.h",

@@ -26,12 +26,14 @@
 #include <glog/logging.h>
 
 #include <folly/CancellationToken.h>
+#include <folly/DefaultKeepAliveExecutor.h>
 #include <folly/Executor.h>
 #include <folly/GLog.h>
 #include <folly/Portability.h>
 #include <folly/ScopeGuard.h>
 #include <folly/Traits.h>
 #include <folly/Try.h>
+#include <folly/coro/AwaitImmediately.h>
 #include <folly/coro/Coroutine.h>
 #include <folly/coro/CurrentExecutor.h>
 #include <folly/coro/Invoke.h>
@@ -141,7 +143,9 @@ class TaskPromiseBase {
 
   FinalAwaiter final_suspend() noexcept { return {}; }
 
-  template <typename Awaitable>
+  template <
+      typename Awaitable,
+      std::enable_if_t<!must_await_immediately_v<Awaitable>, int> = 0>
   auto await_transform(Awaitable&& awaitable) {
     bypassExceptionThrowing_ =
         bypassExceptionThrowing_ == BypassExceptionThrowing::REQUESTED
@@ -153,11 +157,36 @@ class TaskPromiseBase {
         folly::coro::co_withCancellation(
             cancelToken_, static_cast<Awaitable&&>(awaitable))));
   }
+  template <
+      typename Awaitable,
+      std::enable_if_t<must_await_immediately_v<Awaitable>, int> = 0>
+  auto await_transform(Awaitable awaitable) {
+    bypassExceptionThrowing_ =
+        bypassExceptionThrowing_ == BypassExceptionThrowing::REQUESTED
+        ? BypassExceptionThrowing::ACTIVE
+        : BypassExceptionThrowing::INACTIVE;
 
-  template <typename Awaitable>
+    return folly::coro::co_withAsyncStack(folly::coro::co_viaIfAsync(
+        executor_.get_alias(),
+        folly::coro::co_withCancellation(
+            cancelToken_,
+            mustAwaitImmediatelyUnsafeMover(std::move(awaitable))())));
+  }
+
+  template <
+      typename Awaitable,
+      std::enable_if_t<!must_await_immediately_v<Awaitable>, int> = 0>
   auto await_transform(NothrowAwaitable<Awaitable>&& awaitable) {
     bypassExceptionThrowing_ = BypassExceptionThrowing::REQUESTED;
     return await_transform(awaitable.unwrap());
+  }
+  template <
+      typename Awaitable,
+      std::enable_if_t<must_await_immediately_v<Awaitable>, int> = 0>
+  auto await_transform(NothrowAwaitable<Awaitable> awaitable) {
+    bypassExceptionThrowing_ = BypassExceptionThrowing::REQUESTED;
+    return await_transform(
+        mustAwaitImmediatelyUnsafeMover(awaitable.unwrap())());
   }
 
   auto await_transform(co_current_executor_t) noexcept {
@@ -326,7 +355,31 @@ class TaskPromise<void> final
   }
 };
 
+namespace adl {
+// ADL should prefer your `friend co_withExecutor` over this dummy overload.
+void co_withExecutor();
+// This CPO deliberately does NOT use `tag_invoke`, but rather reuses the
+// `co_withExecutor` name as the ADL implementation, just like `co_viaIfAsync`.
+// The reason is that `tag_invoke()` would plumb through `Awaitable&&` instead
+// of `Awaitable`, but `must_await_immediately_v` types require by-value.
+struct WithExecutorFunction {
+  template <typename Awaitable>
+  // Pass `awaitable` by-value, since `&&` would break immediate types
+  auto operator()(Executor::KeepAlive<> executor, Awaitable awaitable) const
+      FOLLY_DETAIL_FORWARD_BODY(co_withExecutor(
+          std::move(executor),
+          mustAwaitImmediatelyUnsafeMover(std::move(awaitable))()))
+};
+} // namespace adl
+
 } // namespace detail
+
+// Semi-awaitables like `Task` should use this CPO to attach executors:
+//   auto taskWithExec = co_withExecutor(std::move(exec), std::move(task));
+//
+// Prefer this over the legacy `scheduleOn()` method, because it's safe for
+// both immediately-awaitable (`NowTask`) and movable (`Task`) tasks.
+FOLLY_DEFINE_CPO(detail::adl::WithExecutorFunction, co_withExecutor)
 
 /// Represents an allocated but not yet started coroutine that has already
 /// been bound to an executor.
@@ -490,7 +543,7 @@ class FOLLY_NODISCARD TaskWithExecutor {
       }
     }
 
-    bool await_ready() const { return false; }
+    bool await_ready() const noexcept { return false; }
 
     template <typename Promise>
     FOLLY_NOINLINE void await_suspend(
@@ -516,6 +569,13 @@ class FOLLY_NODISCARD TaskWithExecutor {
               << "coro::blockingWait or write your test using the CO_TEST* macros instead."
               << "If you are using folly::getCPUExecutor, switch to getGlobalCPUExecutor "
               << "or be sure to call setCPUExecutor first.";
+        }
+        if (dynamic_cast<folly::DefaultKeepAliveExecutor::WeakRefExecutor*>(
+                promise.executor_.get())) {
+          FB_LOG_ONCE(ERROR)
+              << "You are scheduling a coro::Task on a weak executor. "
+              << "It is not supported, and can lead to memory leaks. "
+              << "Consider using CancellationToken instead.";
         }
       }
 
@@ -545,7 +605,8 @@ class FOLLY_NODISCARD TaskWithExecutor {
       return std::move(coro_.promise().result()).value();
     }
 
-    folly::Try<StorageType> await_resume_try() {
+    folly::Try<StorageType> await_resume_try() noexcept(
+        std::is_nothrow_move_constructible_v<StorageType>) {
       SCOPE_EXIT {
         std::exchange(coro_, {}).destroy();
       };
@@ -569,7 +630,7 @@ class FOLLY_NODISCARD TaskWithExecutor {
       }
     }
 
-    bool await_ready() { return false; }
+    bool await_ready() noexcept { return false; }
 
     template <typename Promise>
     FOLLY_NOINLINE coroutine_handle<> await_suspend(
@@ -648,6 +709,12 @@ class FOLLY_NODISCARD TaskWithExecutor {
     return std::move(task);
   }
 
+  NoOpMover<TaskWithExecutor> getUnsafeMover(ForMustAwaitImmediately) && {
+    return NoOpMover{std::move(*this)};
+  }
+
+  using folly_private_task_without_executor_t = Task<T>;
+
  private:
   friend class Task<T>;
 
@@ -724,12 +791,18 @@ class FOLLY_CORO_TASK_ATTRS Task {
 
   void swap(Task& t) noexcept { std::swap(coro_, t.coro_); }
 
-  /// Specify the executor that this task should execute on.
+  /// Specify the executor that this task should execute on:
+  ///   co_withExecutor(executor, std::move(task))
+  //
   /// @param executor An Executor::KeepAlive object, which can be implicity
-  /// constructed from Executor
+  /// constructed from Executor*
   /// @returns a new TaskWithExecutor object, which represents the existing Task
   /// bound to an executor
-  FOLLY_NODISCARD
+  friend TaskWithExecutor<T> co_withExecutor(
+      Executor::KeepAlive<> executor, Task task) noexcept {
+    return std::move(task).scheduleOn(std::move(executor));
+  }
+  // Legacy form, prefer `co_withExecutor(exec, std::move(task))`.
   TaskWithExecutor<T> scheduleOn(Executor::KeepAlive<> executor) && noexcept {
     setExecutor(std::move(executor));
     DCHECK(coro_);
@@ -785,6 +858,12 @@ class FOLLY_CORO_TASK_ATTRS Task {
         invoke(static_cast<F&&>(f), static_cast<A&&>(a)...)));
   }
 
+  NoOpMover<Task> getUnsafeMover(ForMustAwaitImmediately) && {
+    return NoOpMover{std::move(*this)};
+  }
+
+  using PrivateAwaiterTypeForTests = Awaiter;
+
  private:
   friend class detail::TaskPromiseBase;
   friend class detail::TaskPromiseCrtpBase<detail::TaskPromise<T>, T>;
@@ -835,7 +914,8 @@ class FOLLY_CORO_TASK_ATTRS Task {
       return std::move(coro_.promise().result()).value();
     }
 
-    folly::Try<StorageType> await_resume_try() {
+    folly::Try<StorageType> await_resume_try() noexcept(
+        std::is_nothrow_move_constructible_v<StorageType>) {
       DCHECK(coro_);
       SCOPE_EXIT {
         std::exchange(coro_, {}).destroy();

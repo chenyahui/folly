@@ -24,17 +24,22 @@
 
 #if FOLLY_HAS_COROUTINES
 
+namespace folly {
+namespace detail {
+
+template <typename Out>
+inline auto gtestLogCurrentException(Out&& out) {
+  auto ew = exception_wrapper(std::current_exception());
 #ifdef FOLLY_HAVE_SMART_EXCEPTION_TRACER
-
-#define LOG_ASYNC_TEST_EXCEPTION                            \
-  GTEST_LOG_(ERROR) << ex.what() << ", async stack trace: " \
-                    << folly::exception_tracer::getAsyncTrace(ex);
-
+  auto trace = folly::exception_tracer::getAsyncTrace(ew);
+  out << ew << ", async stack trace: " << trace;
 #else
-
-#define LOG_ASYNC_TEST_EXCEPTION GTEST_LOG_(ERROR) << ex.what();
-
+  out << ew;
 #endif
+}
+
+} // namespace detail
+} // namespace folly
 
 /**
  * This is based on the GTEST_TEST_ macro from gtest-internal.h. It seems that
@@ -45,7 +50,13 @@
  * Note that you cannot use ASSERT macros in coro tests. See below for
  * CO_ASSERT_*.
  */
-#define CO_TEST_(test_suite_name, test_name, parent_class, parent_id)          \
+#define CO_TEST_(                                                              \
+    test_suite_name,                                                           \
+    test_name,                                                                 \
+    parent_class,                                                              \
+    parent_id,                                                                 \
+    body_coro_t,                                                               \
+    unwrap_body)                                                               \
   static_assert(                                                               \
       sizeof(GTEST_STRINGIFY_(test_suite_name)) > 1,                           \
       "test_suite_name must not be empty");                                    \
@@ -69,8 +80,8 @@
                                                                                \
    private:                                                                    \
     void TestBody() override;                                                  \
-    folly::coro::Task<void> co_TestBody();                                     \
-    static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;      \
+    body_coro_t co_TestBody();                                                 \
+    static ::testing::TestInfo* const test_info_ [[maybe_unused]];             \
   };                                                                           \
                                                                                \
   ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(                           \
@@ -89,35 +100,41 @@
           new ::testing::internal::TestFactoryImpl<GTEST_TEST_CLASS_NAME_(     \
               test_suite_name, test_name)>);                                   \
   void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody() {        \
-    try {                                                                      \
-      folly::coro::blockingWait(co_TestBody());                                \
-    } catch (const std::exception& ex) {                                       \
-      LOG_ASYNC_TEST_EXCEPTION                                                 \
-      throw;                                                                   \
-    }                                                                          \
+    unwrap_body(co_TestBody);                                                  \
   }                                                                            \
-  folly::coro::Task<void> GTEST_TEST_CLASS_NAME_(                              \
-      test_suite_name, test_name)::co_TestBody()
+  body_coro_t GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::co_TestBody()
 
-/**
- * TEST() for coro tests.
+#define CO_UNWRAP_BODY(body)                                    \
+  try {                                                         \
+    folly::coro::blockingWait(body());                          \
+  } catch (...) {                                               \
+    folly::detail::gtestLogCurrentException(GTEST_LOG_(ERROR)); \
+    throw;                                                      \
+  }
+
+/**                                    \
+ * TEST() for coro tests.              \
  */
-#define CO_TEST(test_case_name, test_name) \
-  CO_TEST_(                                \
-      test_case_name,                      \
-      test_name,                           \
-      ::testing::Test,                     \
-      ::testing::internal::GetTestTypeId())
+#define CO_TEST(test_case_name, test_name)  \
+  CO_TEST_(                                 \
+      test_case_name,                       \
+      test_name,                            \
+      ::testing::Test,                      \
+      ::testing::internal::GetTestTypeId(), \
+      folly::coro::Task<void>,              \
+      CO_UNWRAP_BODY)
 
 /**
  * TEST_F() for coro tests.
  */
-#define CO_TEST_F(test_fixture, test_name) \
-  CO_TEST_(                                \
-      test_fixture,                        \
-      test_name,                           \
-      test_fixture,                        \
-      ::testing::internal::GetTypeId<test_fixture>())
+#define CO_TEST_F(test_fixture, test_name)            \
+  CO_TEST_(                                           \
+      test_fixture,                                   \
+      test_name,                                      \
+      test_fixture,                                   \
+      ::testing::internal::GetTypeId<test_fixture>(), \
+      folly::coro::Task<void>,                        \
+      CO_UNWRAP_BODY)
 
 #define CO_TEST_P(test_suite_name, test_name)                                  \
   class GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                     \
@@ -142,7 +159,7 @@
               ::testing::internal::CodeLocation(__FILE__, __LINE__));          \
       return 0;                                                                \
     }                                                                          \
-    static int gtest_registering_dummy_ GTEST_ATTRIBUTE_UNUSED_;               \
+    static int gtest_registering_dummy_ [[maybe_unused]];                      \
     GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)                         \
     (const GTEST_TEST_CLASS_NAME_(test_suite_name, test_name) &) = delete;     \
     GTEST_TEST_CLASS_NAME_(test_suite_name, test_name) & operator=(            \
@@ -155,8 +172,8 @@
   void GTEST_TEST_CLASS_NAME_(test_suite_name, test_name)::TestBody() {        \
     try {                                                                      \
       folly::coro::blockingWait(co_TestBody());                                \
-    } catch (const std::exception& ex) {                                       \
-      LOG_ASYNC_TEST_EXCEPTION                                                 \
+    } catch (...) {                                                            \
+      folly::detail::gtestLogCurrentException(GTEST_LOG_(ERROR));              \
       throw;                                                                   \
     }                                                                          \
   }                                                                            \
@@ -175,8 +192,8 @@
     void TestBody() override;                                                 \
     folly::coro::Task<void> co_TestBody();                                    \
   };                                                                          \
-  static bool gtest_##CaseName##_##TestName##_registered_                     \
-      GTEST_ATTRIBUTE_UNUSED_ = ::testing::internal::TypeParameterizedTest<   \
+  static bool gtest_##CaseName##_##TestName##_registered_ [[maybe_unused]] =  \
+      ::testing::internal::TypeParameterizedTest<                             \
           CaseName,                                                           \
           ::testing::internal::TemplateSel<GTEST_TEST_CLASS_NAME_(            \
               CaseName, TestName)>,                                           \
@@ -195,14 +212,45 @@
       CaseName, TestName)<gtest_TypeParam_>::TestBody() {                     \
     try {                                                                     \
       folly::coro::blockingWait(co_TestBody());                               \
-    } catch (const std::exception& ex) {                                      \
-      LOG_ASYNC_TEST_EXCEPTION                                                \
+    } catch (...) {                                                           \
+      folly::detail::gtestLogCurrentException(GTEST_LOG_(ERROR));             \
       throw;                                                                  \
     }                                                                         \
   }                                                                           \
   template <typename gtest_TypeParam_>                                        \
   folly::coro::Task<void> GTEST_TEST_CLASS_NAME_(                             \
       CaseName, TestName)<gtest_TypeParam_>::co_TestBody()
+
+#define CO_TYPED_TEST_P(SuiteName, TestName)                      \
+  namespace GTEST_SUITE_NAMESPACE_(SuiteName) {                   \
+  template <typename gtest_TypeParam_>                            \
+  class TestName : public SuiteName<gtest_TypeParam_> {           \
+   private:                                                       \
+    typedef SuiteName<gtest_TypeParam_> TestFixture;              \
+    typedef gtest_TypeParam_ TypeParam;                           \
+    void TestBody() override;                                     \
+    folly::coro::Task<> co_TestBody();                            \
+  };                                                              \
+  [[maybe_unused]] static bool gtest_##TestName##_defined_ =      \
+      GTEST_TYPED_TEST_SUITE_P_STATE_(SuiteName).AddTestName(     \
+          __FILE__,                                               \
+          __LINE__,                                               \
+          GTEST_STRINGIFY_(SuiteName),                            \
+          GTEST_STRINGIFY_(TestName));                            \
+  }                                                               \
+  template <typename gtest_TypeParam_>                            \
+  void GTEST_SUITE_NAMESPACE_(                                    \
+      SuiteName)::TestName<gtest_TypeParam_>::TestBody() {        \
+    try {                                                         \
+      folly::coro::blockingWait(co_TestBody());                   \
+    } catch (...) {                                               \
+      folly::detail::gtestLogCurrentException(GTEST_LOG_(ERROR)); \
+      throw;                                                      \
+    }                                                             \
+  }                                                               \
+  template <typename gtest_TypeParam_>                            \
+  folly::coro::Task<void> GTEST_SUITE_NAMESPACE_(                 \
+      SuiteName)::TestName<gtest_TypeParam_>::co_TestBody()
 
 /**
  * Coroutine versions of GTests's Assertion predicate macros. Use these in place
@@ -272,5 +320,20 @@
   if (!(expr)) {                  \
   } else                          \
     CO_SKIP(message)
+
+/**
+ * Coroutine version of SUCCEED() which is defined as GTEST_SUCCEED()
+ */
+#define CO_SUCCEED(message) \
+  co_return GTEST_MESSAGE_(message, ::testing::TestPartResult::kSuccess)
+
+/**
+ * Coroutine version
+ */
+#define CO_SUCCEED_IF(expr, message) \
+  GTEST_AMBIGUOUS_ELSE_BLOCKER_      \
+  if (!(expr)) {                     \
+  } else                             \
+    CO_SUCCEED(message)
 
 #endif // FOLLY_HAS_COROUTINES

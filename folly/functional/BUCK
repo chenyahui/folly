@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "apply_tuple",
     headers = ["ApplyTuple.h"],
     exported_deps = [
@@ -12,7 +14,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "invoke",
     headers = ["Invoke.h"],
     exported_deps = [
@@ -28,7 +31,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "partial",
     headers = ["Partial.h"],
     exported_deps = [
@@ -37,7 +41,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "protocol",
     headers = ["protocol.h"],
     exported_deps = [
@@ -48,7 +53,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "traits",
     headers = ["traits.h"],
     exported_deps = [

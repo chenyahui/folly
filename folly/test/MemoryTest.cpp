@@ -98,6 +98,14 @@ TEST(toSharedPtrAliasing, example) {
   EXPECT_EQ(4, *a);
 }
 
+TEST(toSharedPtrNonOwning, example) {
+  int i = 3;
+  auto sp = folly::to_shared_ptr_non_owning(&i);
+  EXPECT_EQ(&i, sp.get());
+  EXPECT_EQ(3, *sp);
+  EXPECT_EQ(0, sp.use_count());
+}
+
 TEST(toWeakPtr, example) {
   auto s = std::make_shared<int>(17);
   EXPECT_EQ(1, s.use_count());
@@ -189,6 +197,21 @@ TEST(copyThroughUniquePtr, example) {
   p.reset();
   s = copy_through_unique_ptr(p);
   EXPECT_EQ(s, nullptr);
+}
+
+TEST(copyThroughSharedPtr, example) {
+  std::shared_ptr<int> p = std::make_shared<int>(17);
+  std::shared_ptr<int> s = copy_through_shared_ptr(p);
+  EXPECT_EQ(17, *s);
+  EXPECT_EQ(17, *p);
+  EXPECT_EQ(s.use_count(), 1);
+  EXPECT_EQ(p.use_count(), 1);
+  EXPECT_NE(s.get(), p.get());
+  p.reset();
+  s = copy_through_shared_ptr(p);
+  EXPECT_EQ(s, nullptr);
+  EXPECT_EQ(s.use_count(), 0);
+  EXPECT_EQ(p.use_count(), 0);
 }
 
 TEST(toErasedUniquePtr, example) {

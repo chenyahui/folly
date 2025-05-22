@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <memory>
 
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
 #include <folly/testing/TestUtil.h>
 
@@ -119,6 +120,27 @@ TEST(ExceptionTest, makeSystemError) {
   EXPECT_EQ(errorCategoryForErrnoDomain(), ex.code().category());
   EXPECT_TRUE(StringPiece{ex.what()}.contains("unexpected success"))
       << "what() string missing input message: " << ex.what();
+}
+
+TEST(ExceptionTest, testCheckThrow) {
+  auto throwIf = [](bool shouldThrow) {
+    CHECK_THROW(!shouldThrow, std::runtime_error);
+  };
+  EXPECT_NO_THROW(throwIf(false));
+  EXPECT_THROW(throwIf(true), std::runtime_error);
+
+  auto fn = folly::fs::path("folly/test/ExceptionTest.cpp");
+  fn.make_preferred();
+
+  try {
+    throwIf(true);
+  } catch (const std::runtime_error& e) {
+    auto msg = std::string(e.what());
+    EXPECT_THAT(msg, testing::HasSubstr("Check failed: !shouldThrow"));
+    EXPECT_THAT(msg, testing::HasSubstr(fn.string()));
+    auto lineNumber = msg.substr(msg.rfind(':') + 1);
+    EXPECT_TRUE(std::all_of(lineNumber.begin(), lineNumber.end(), ::isdigit));
+  }
 }
 
 } // namespace test

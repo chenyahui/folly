@@ -1,8 +1,10 @@
-load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//tools/build_defs/dirsync:fb_dirsync_cpp_library.bzl", "fb_dirsync_cpp_library")
+load("@fbsource//xplat/folly:defs.bzl", "folly_xplat_library")
+load("@fbsource//xplat/pfh/triage_InfrastructureSupermoduleOptou:DEFS.bzl", "triage_InfrastructureSupermoduleOptou")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fb_dirsync_cpp_library(
     name = "dynamic",
     srcs = [
         "dynamic.cpp",
@@ -14,6 +16,8 @@ cpp_library(
         "dynamic-inl.h",
         "json.h",
     ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    xplat_impl = folly_xplat_library,
     deps = [
         "//folly:unicode",
         "//folly/container:enumerate",
@@ -49,10 +53,12 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fb_dirsync_cpp_library(
     name = "json_pointer",
     srcs = ["json_pointer.cpp"],
     headers = ["json_pointer.h"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    xplat_impl = folly_xplat_library,
     deps = [
         "//folly:string",
     ],
@@ -62,10 +68,12 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fb_dirsync_cpp_library(
     name = "json_patch",
     srcs = ["json_patch.cpp"],
     headers = ["json_patch.h"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    xplat_impl = folly_xplat_library,
     deps = [
         "//folly/container:enumerate",
     ],
@@ -80,10 +88,12 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fb_dirsync_cpp_library(
     name = "json_schema",
     srcs = ["JSONSchema.cpp"],
     headers = ["JSONSchema.h"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    xplat_impl = folly_xplat_library,
     deps = [
         "//folly:c_portability",
         "//folly:conv",
@@ -104,13 +114,15 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fb_dirsync_cpp_library(
     name = "dynamic_parser",
     srcs = ["DynamicParser.cpp"],
     headers = [
         "DynamicParser.h",
         "DynamicParser-inl.h",
     ],
+    feature = triage_InfrastructureSupermoduleOptou,
+    xplat_impl = folly_xplat_library,
     deps = [
         "//folly:optional",
     ],
@@ -131,19 +143,21 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fb_dirsync_cpp_library(
     name = "json_mock_util",
     headers = ["JsonMockUtil.h"],
+    xplat_impl = folly_xplat_library,
     exported_deps = [
         "//folly/portability:gmock",
         "//folly/test:json_test_util",
     ],
 )
 
-cpp_library(
+fb_dirsync_cpp_library(
     name = "json_test_util",
     srcs = ["JsonTestUtil.cpp"],
     headers = ["JsonTestUtil.h"],
+    xplat_impl = folly_xplat_library,
     deps = [
         "//folly:conv",
         "//folly/lang:assume",

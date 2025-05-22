@@ -1,9 +1,11 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "atomic_read_mostly_main_ptr_benchmark",
     srcs = ["AtomicReadMostlyMainPtrBenchmark.cpp"],
     deps = [
@@ -13,7 +15,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "atomic_read_mostly_main_ptr_test",
     srcs = ["AtomicReadMostlyMainPtrTest.cpp"],
     deps = [
@@ -22,7 +25,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "read_mostly_shared_ptr_benchmark",
     srcs = ["ReadMostlySharedPtrBenchmark.cpp"],
     headers = [],
@@ -37,7 +41,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "read_mostly_shared_ptr_stress_test",
     srcs = ["ReadMostlySharedPtrStressTest.cpp"],
     headers = [],
@@ -48,7 +53,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "read_mostly_shared_ptr_test",
     srcs = ["ReadMostlySharedPtrTest.cpp"],
     headers = [],
@@ -60,7 +66,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "primary_ptr_test",
     srcs = ["PrimaryPtrTest.cpp"],
     headers = [],
@@ -74,7 +81,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "ref_count_benchmark",
     srcs = ["RefCountBenchmark.cpp"],
     headers = [],
@@ -84,7 +92,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "ref_count_test",
     srcs = ["RefCountTest.cpp"],
     headers = [],

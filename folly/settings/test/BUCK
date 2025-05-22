@@ -1,10 +1,12 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "settings_bench",
     srcs = ["SettingsBenchmarks.cpp"],
     deps = [
@@ -16,7 +18,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "settings_test",
     srcs = [
         "SettingsTest.cpp",
@@ -37,7 +40,27 @@ cpp_unittest(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_unittest,
+    name = "command_line_parser_test",
+    srcs = [
+        "CommandLineParserTest.cpp",
+    ],
+    labels = ["case-isolation-failure"],
+    deps = [
+        "fbsource//third-party/googletest:gmock",
+        "//folly:conv",
+        "//folly:string",
+        "//folly/container:array",
+        "//folly/logging:logging",
+        "//folly/settings:command_line_parser",
+        "//folly/settings:settings",
+        "//folly/settings:settings_accessor_proxy",
+    ],
+)
+
+fbcode_target(
+    _kind = cpp_library,
     name = "a",
     srcs = [
         "a.cpp",
@@ -50,7 +73,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "b",
     srcs = [
         "b.cpp",

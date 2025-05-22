@@ -117,9 +117,10 @@ def _compute_include_directories():
     thrift_path = base_path[6:]
     return ["/".join(len(thrift_path.split("/")) * [".."])]
 
-def folly_library(
+def folly_xplat_library(
         name,
         srcs = (),
+        header_namespace = "",
         exported_headers = (),
         raw_headers = (),
         deps = (),
@@ -150,7 +151,7 @@ def folly_library(
     fb_xplat_cxx_library(
         name = name,
         srcs = srcs,
-        header_namespace = "",
+        header_namespace = header_namespace,
         exported_headers = exported_headers,
         raw_headers = raw_headers,
         public_include_directories = _compute_include_directories(),
@@ -166,11 +167,21 @@ def folly_library(
             "ovr_config//os:android": FBANDROID_CXXFLAGS,
             "ovr_config//os:iphoneos": CLANG_CXX_FLAGS,
             # TODO: Why iphoneos and macos are not marked as clang compilers?
-            "ovr_config//os:macos": CLANG_CXX_FLAGS,
+            "ovr_config//os:macos": CLANG_CXX_FLAGS + ["-fvisibility=default"],
         }) + select({
             "DEFAULT": [],
             "ovr_config//os:windows-cl": WINDOWS_MSVC_CXXFLAGS,
             "ovr_config//os:windows-gcc-or-clang": WINDOWS_CLANG_CXX_FLAGS,
+        }) + select({
+            "DEFAULT": [],
+            "wa_android//tools/buck/build_defs/monorepo:bloks_sync_live_deps": [
+                "-fexceptions",
+                "-frtti",
+            ],
+            "wa_android//tools/buck/build_defs/monorepo:live_deps": [
+                "-fexceptions",
+                "-frtti",
+            ],
         }),
         fbobjc_compiler_flags = kwargs.pop("fbobjc_compiler_flags", []) +
                                 FBOBJC_CXXFLAGS,
@@ -180,13 +191,13 @@ def folly_library(
         **kwargs
     )
 
-def folly_cxx_library(name, **kwargs):
-    folly_library(
+def folly_xplat_cxx_library(name, **kwargs):
+    folly_xplat_library(
         name = name,
         **kwargs
     )
 
-def folly_cxx_test(
+def folly_xplat_cxx_test(
         name,
         srcs,
         raw_headers = [],
@@ -196,7 +207,7 @@ def folly_cxx_test(
     # resources is cherry picked because some of the other kwargs
     # have issues that need to be investigated.
     # e.g., Some args are duplicated. Some args cause TSAN errors.
-    # TODO(T188948036): Fix xplat/folly:folly-futures-test and folly_cxx_test
+    # TODO(T188948036): Fix xplat/folly:folly-futures-test and folly_xplat_cxx_test
     resources = kwargs.get("resources", [])
 
     fb_xplat_cxx_test(
@@ -212,7 +223,7 @@ def folly_cxx_test(
         platforms = (CXX,),
     )
 
-def folly_cxx_binary(
+def folly_xplat_cxx_binary(
         name,
         srcs,
         raw_headers = [],

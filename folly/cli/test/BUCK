@@ -1,9 +1,11 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "nested_command_line_app_test",
     srcs = ["NestedCommandLineAppTest.cpp"],
     headers = [],
@@ -23,7 +25,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "nested_command_line_app_test_helper",
     srcs = ["NestedCommandLineAppTestHelper.cpp"],
     headers = [],
@@ -33,7 +36,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "program_options_test",
     srcs = ["ProgramOptionsTest.cpp"],
     headers = [],
@@ -52,7 +56,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "program_options_test_helper",
     srcs = ["ProgramOptionsTestHelper.cpp"],
     headers = [],
@@ -65,7 +70,8 @@ cpp_binary(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "nested_command_line_app_example",
     srcs = ["NestedCommandLineAppExample.cpp"],
     headers = [],

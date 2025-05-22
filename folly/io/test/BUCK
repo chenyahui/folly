@@ -1,9 +1,11 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "iobuf_benchmark",
     srcs = ["IOBufBenchmark.cpp"],
     headers = [],
@@ -13,7 +15,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "iobuf_test",
     srcs = ["IOBufTest.cpp"],
     headers = [],
@@ -29,7 +32,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "iobuf_cb_test",
     srcs = ["IOBufCBTest.cpp"],
     headers = [],
@@ -41,7 +45,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "iobuf_cursor_benchmark",
     srcs = ["IOBufCursorBenchmark.cpp"],
     headers = [],
@@ -54,7 +59,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "iobuf_cursor_test",
     srcs = ["IOBufCursorTest.cpp"],
     headers = [],
@@ -66,7 +72,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "iobuf_network_bench",
     srcs = ["NetworkBenchmark.cpp"],
     headers = [],
@@ -78,7 +85,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "iobuf_queue_test",
     srcs = ["IOBufQueueTest.cpp"],
     headers = [],
@@ -90,7 +98,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "iobuf_iovec_builder_test",
     srcs = ["IOBufIovecBuilderTest.cpp"],
     headers = [],
@@ -100,7 +109,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "queueappender_benchmark",
     srcs = ["QueueAppenderBenchmark.cpp"],
     headers = [],
@@ -112,7 +122,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "record_io_test",
     srcs = ["RecordIOTest.cpp"],
     headers = [],
@@ -132,7 +143,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "shutdown_socket_set_test",
     srcs = ["ShutdownSocketSetTest.cpp"],
     headers = [],
@@ -148,7 +160,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "socket_option_value_test",
     srcs = ["SocketOptionValueTest.cpp"],
     headers = [],
@@ -162,7 +175,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "fs_util_test",
     srcs = ["FsUtilTest.cpp"],
     deps = [

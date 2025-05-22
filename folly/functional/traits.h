@@ -27,7 +27,7 @@ struct function_traits_base_;
 
 template <typename R, typename... A>
 struct function_traits_base_<R(A...)> {
-  using result_type = R;
+  using result = R;
 
   template <std::size_t Idx>
   using argument = type_pack_element_t<Idx, A...>;
@@ -64,7 +64,7 @@ struct function_traits_cvref_ {
 //  When complete, has a class body of the form:
 //
 //      struct function_traits<S> {
-//        using result_type = R;
+//        using result = R;
 //        static constexpr bool is_nothrow = NX;
 //
 //        template <std::size_t Index>
@@ -449,6 +449,51 @@ struct function_traits<R(A..., ...) const volatile && noexcept>
 
 //  ----
 
+//  function_result_t
+//
+//  The result type of the given function type.
+template <typename F>
+using function_result_t = typename function_traits<F>::result;
+
+//  function_arguments_size_t
+//
+//  The size of the arguments list of the given function type, as an
+//  instantiation of integral_constant.
+template <typename F>
+using function_arguments_size_t =
+    typename function_traits<F>::template arguments<type_pack_size_t>;
+
+//  function_arguments_size_t
+//
+//  The size of the arguments list of the given function type.
+template <typename F>
+constexpr std::size_t function_arguments_size_v =
+    function_arguments_size_t<F>::value;
+
+//  function_arguments_element_t
+//
+//  The type of the argument at the given index of the given function type.
+template <std::size_t Idx, typename F>
+using function_arguments_element_t =
+    typename function_traits<F>::template argument<Idx>;
+
+//  function_is_nothrow_v
+//
+//  True precisely when the given function type is marked noexcept.
+template <typename F>
+constexpr bool function_is_nothrow_v = function_traits<F>::is_nothrow;
+
+//  function_is_variadic_v
+//
+//  True precisely when the given function type is variadic.
+//
+//  Note: C-style variadic, like in printf. Not C++-style variadic-template,
+//  since concrete function types cannot also be function type templates.
+template <typename F>
+constexpr bool function_is_variadic_v = function_traits<F>::is_variadic;
+
+//  ----
+
 namespace detail {
 
 template <bool Nx, bool Var, typename R>
@@ -475,11 +520,9 @@ struct function_remove_cvref_<true, true, R> {
 };
 
 template <typename F, typename T = function_traits<F>>
-using function_remove_cvref_t_ =
-    typename T::template arguments<function_remove_cvref_<
-        T::is_nothrow,
-        T::is_variadic,
-        typename T::result_type>::template apply>;
+using function_remove_cvref_t_ = typename T::template arguments<
+    function_remove_cvref_<T::is_nothrow, T::is_variadic, typename T::result>::
+        template apply>;
 
 } // namespace detail
 

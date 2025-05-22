@@ -25,6 +25,8 @@
 
 namespace folly {
 
+namespace {
+
 /*
  * A good biased scaling function has the following properties:
  *   - The value of the function k(0, delta) = 0, and k(1, delta) = delta.
@@ -60,7 +62,7 @@ namespace folly {
  * }
  */
 
-static double k_to_q(double k, double d) {
+double k_to_q(double k, double d) {
   double k_div_d = k / d;
   if (k_div_d >= 0.5) {
     double base = 1 - k_div_d;
@@ -70,7 +72,7 @@ static double k_to_q(double k, double d) {
   }
 }
 
-static double clamp(double v, double lo, double hi) {
+double clamp(double v, double lo, double hi) {
   if (v > hi) {
     return hi;
   } else if (v < lo) {
@@ -78,6 +80,8 @@ static double clamp(double v, double lo, double hi) {
   }
   return v;
 }
+
+} // namespace
 
 TDigest::TDigest(
     std::vector<Centroid> centroids,
@@ -189,7 +193,7 @@ void TDigest::internalMerge(
     double nextSum = next.mean() * next.weight();
     weightSoFar += next.weight();
 
-    if (weightSoFar <= q_limit_times_count) {
+    if (weightSoFar <= q_limit_times_count || k_limit > maxSize_) {
       sumsToMerge += nextSum;
       weightsToMerge += next.weight();
     } else {
@@ -212,6 +216,7 @@ void TDigest::internalMerge(
   dst.max_ = newMax;
   dst.min_ = newMin;
 
+  DCHECK_LE(workingBuffer.size(), maxSize_);
   std::swap(dst.centroids_, workingBuffer);
 }
 
@@ -245,14 +250,42 @@ void TDigest::merge(
   internalMerge(*this, sortedValues, workingBuffer.buf);
 }
 
-TDigest TDigest::merge(Range<const TDigest*> digests) {
+namespace {
+
+const TDigest* getPtr(const TDigest& d) {
+  return &d;
+}
+const TDigest* getPtr(const TDigest* d) {
+  return d;
+}
+
+} // namespace
+
+template <class T>
+/* static */ TDigest TDigest::mergeImpl(Range<T> digests) {
+  if (digests.empty()) {
+    return TDigest();
+  }
+
+  size_t maxSize = getPtr(digests.front())->maxSize_;
+
   size_t nCentroids = 0;
+  const TDigest* lastNonEmpty = nullptr;
   for (const auto& digest : digests) {
-    nCentroids += digest.centroids_.size();
+    if (const auto* d = getPtr(digest); !d->empty()) {
+      nCentroids += d->centroids_.size();
+      lastNonEmpty = d;
+    }
   }
 
   if (nCentroids == 0) {
-    return TDigest();
+    return TDigest(maxSize);
+  } else if (
+      nCentroids == lastNonEmpty->centroids_.size() &&
+      lastNonEmpty->maxSize_ == maxSize) {
+    // Only one non-empty digest and it already has the desidered maxSize, we
+    // can skip merge.
+    return *lastNonEmpty;
   }
 
   std::vector<Centroid> centroids;
@@ -268,7 +301,8 @@ TDigest TDigest::merge(Range<const TDigest*> digests) {
   double min = std::numeric_limits<double>::infinity();
   double max = -std::numeric_limits<double>::infinity();
 
-  for (const auto& digest : digests) {
+  for (const auto& d : digests) {
+    const auto& digest = *getPtr(d);
     starts.push_back(centroids.size());
     double curCount = digest.count();
     if (curCount > 0) {
@@ -310,14 +344,13 @@ TDigest TDigest::merge(Range<const TDigest*> digests) {
 
   DCHECK(std::is_sorted(centroids.begin(), centroids.end()));
 
-  size_t maxSize = digests.begin()->maxSize_;
   TDigest result(maxSize);
 
   std::vector<Centroid> compressed;
   compressed.reserve(maxSize);
 
   double k_limit = 1;
-  double q_limit_times_count = k_to_q(k_limit, maxSize) * count;
+  double q_limit_times_count = k_to_q(k_limit++, maxSize) * count;
 
   Centroid cur = centroids.front();
   double weightSoFar = cur.weight();
@@ -325,7 +358,7 @@ TDigest TDigest::merge(Range<const TDigest*> digests) {
   double weightsToMerge = 0;
   for (auto it = centroids.begin() + 1, e = centroids.end(); it != e; ++it) {
     weightSoFar += it->weight();
-    if (weightSoFar <= q_limit_times_count) {
+    if (weightSoFar <= q_limit_times_count || k_limit > maxSize) {
       sumsToMerge += it->mean() * it->weight();
       weightsToMerge += it->weight();
     } else {
@@ -339,6 +372,7 @@ TDigest TDigest::merge(Range<const TDigest*> digests) {
   }
   result.sum_ += cur.add(sumsToMerge, weightsToMerge);
   compressed.push_back(cur);
+  DCHECK_LE(compressed.size(), maxSize);
   compressed.shrink_to_fit();
 
   // Deal with floating point precision
@@ -349,6 +383,19 @@ TDigest TDigest::merge(Range<const TDigest*> digests) {
   result.max_ = max;
   result.centroids_ = std::move(compressed);
   return result;
+}
+
+/* static */ TDigest TDigest::merge(Range<const TDigest*> digests) {
+  return mergeImpl(digests);
+}
+
+/* static */ TDigest TDigest::merge(Range<const TDigest**> digests) {
+  return mergeImpl(digests);
+}
+
+/* static */ TDigest TDigest::merge(const TDigest& d1, const TDigest& d2) {
+  std::array<const TDigest*, 2> digests = {&d1, &d2};
+  return merge(range(digests));
 }
 
 double TDigest::estimateQuantile(double q) const {

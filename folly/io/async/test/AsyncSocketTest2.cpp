@@ -827,6 +827,62 @@ TEST_P(AsyncSocketConnectTest, ConnectAndRead) {
   ASSERT_FALSE(socket->isClosedByPeer());
 }
 
+TEST_P(AsyncSocketConnectTest, ConnectAndReadZC) {
+  TestServer server;
+
+  // connect()
+  EventBase::Options opt;
+  opt.setBackendFactory([]() -> std::unique_ptr<folly::EventBaseBackendBase> {
+    return std::make_unique<TestEventBaseBackend>();
+  });
+  EventBase evb(std::move(opt));
+  std::shared_ptr<AsyncSocket> socket = AsyncSocket::newSocket(&evb);
+  if (GetParam() == TFOState::ENABLED) {
+    socket->enableTFO();
+  }
+  auto backend = dynamic_cast<TestEventBaseBackend*>(evb.getBackend());
+
+  ConnCallback ccb;
+  socket->connect(&ccb, server.getAddress(), 30);
+
+  ReadCallback rcb;
+  rcb.setReadMode(AsyncReader::ReadCallback::ReadMode::ReadZC);
+  socket->setReadCB(&rcb);
+  if (GetParam() == TFOState::ENABLED) {
+    // Trigger a connection
+    socket->writeChain(nullptr, IOBuf::copyBuffer("hey"));
+  }
+
+  // Even though we haven't looped yet, we should be able to accept
+  // the connection and send data to it.
+  std::shared_ptr<BlockingSocket> acceptedSocket = server.accept();
+  uint8_t buf[128];
+  memset(buf, 'a', sizeof(buf));
+  acceptedSocket->write(buf, sizeof(buf));
+  acceptedSocket->flush();
+  acceptedSocket->close();
+
+  // Loop, although there shouldn't be anything to do.
+  evb.loop();
+
+  ASSERT_EQ(ccb.state, STATE_SUCCEEDED);
+  ASSERT_TRUE(backend->queued);
+  // ReadZC is async and oneshot. To prevent level triggering of the socket
+  // while the request is issued async but not yet completed, the callback is
+  // uninstalled.
+  ASSERT_EQ(socket->getReadCallback(), nullptr);
+
+  // The real backend would call this on completion of the ReadZC request. But
+  // in the test we have to call it explicitly.
+  backend->recvZcCb(backend->bytes);
+  ASSERT_EQ(rcb.buffers.size(), 1);
+  ASSERT_EQ(rcb.buffers[0].length, sizeof(buf));
+  ASSERT_EQ(memcmp(rcb.buffers[0].buffer, buf, sizeof(buf)), 0);
+
+  ASSERT_FALSE(socket->isClosedBySelf());
+  ASSERT_FALSE(socket->isClosedByPeer());
+}
+
 TEST_P(AsyncSocketConnectTest, ConnectAndReadv) {
   TestServer server;
 
@@ -2342,6 +2398,136 @@ TEST(AsyncSocketTest, ServerAcceptOptions) {
 #endif
 }
 
+TEST(AsyncSocketTest, NapiDispatch) {
+  EventBase eventBase;
+  std::shared_ptr<AsyncServerSocket> serverSocket(
+      AsyncServerSocket::newSocket(&eventBase));
+  serverSocket->bind(0);
+  serverSocket->listen(16);
+  folly::SocketAddress serverAddress;
+  serverSocket->getAddress(&serverAddress);
+
+  // Add several EventBases
+  EventBase::Options opt1;
+  opt1.setBackendFactory([]() -> std::unique_ptr<folly::EventBaseBackendBase> {
+    return EventBase::getTestBackend(0);
+  });
+  EventBase evb1(std::move(opt1));
+
+  EventBase::Options opt2;
+  opt2.setBackendFactory([]() -> std::unique_ptr<folly::EventBaseBackendBase> {
+    return EventBase::getTestBackend(1);
+  });
+  EventBase evb2(std::move(opt2));
+
+  EventBase::Options opt3;
+  opt3.setBackendFactory([]() -> std::unique_ptr<folly::EventBaseBackendBase> {
+    return EventBase::getTestBackend(2);
+  });
+  EventBase evb3(std::move(opt3));
+
+  int cb1Count = 0;
+  int cb2Count = 0;
+  int cb3Count = 0;
+
+  // Add several accept callbacks
+  TestAcceptCallback cb1;
+  TestAcceptCallback cb2;
+  TestAcceptCallback cb3;
+  cb1.setConnectionAcceptedFn(
+      [&](NetworkSocket /* fd */, const folly::SocketAddress& /* addr */) {
+        if (++cb1Count == 3) {
+          eventBase.runInEventBaseThread([&] {
+            serverSocket->removeAcceptCallback(&cb1, &evb1);
+          });
+        }
+      });
+
+  cb2.setConnectionAcceptedFn(
+      [&](NetworkSocket /* fd */, const folly::SocketAddress& /* addr */) {
+        if (++cb2Count == 2) {
+          eventBase.runInEventBaseThread([&] {
+            serverSocket->removeAcceptCallback(&cb2, &evb2);
+          });
+        }
+      });
+
+  cb3.setConnectionAcceptedFn(
+      [&](NetworkSocket /* fd */, const folly::SocketAddress& /* addr */) {
+        if (++cb3Count == 1) {
+          eventBase.runInEventBaseThread([&] {
+            serverSocket->removeAcceptCallback(&cb3, &evb3);
+          });
+        }
+      });
+
+  // Make several connections to the socket
+  std::shared_ptr<AsyncSocket> sock1(
+      AsyncSocket::newSocket(&eventBase, serverAddress)); // cb1
+  std::shared_ptr<AsyncSocket> sock2(
+      AsyncSocket::newSocket(&eventBase, serverAddress)); // cb1
+  std::shared_ptr<AsyncSocket> sock3(
+      AsyncSocket::newSocket(&eventBase, serverAddress)); // cb1
+  std::shared_ptr<AsyncSocket> sock4(
+      AsyncSocket::newSocket(&eventBase, serverAddress)); // cb2
+  std::shared_ptr<AsyncSocket> sock5(
+      AsyncSocket::newSocket(&eventBase, serverAddress)); // cb2
+  std::shared_ptr<AsyncSocket> sock6(
+      AsyncSocket::newSocket(&eventBase, serverAddress)); // cb3
+  folly::SocketAddress sock1addr;
+  folly::SocketAddress sock2addr;
+  folly::SocketAddress sock3addr;
+  folly::SocketAddress sock4addr;
+  folly::SocketAddress sock5addr;
+  folly::SocketAddress sock6addr;
+  sock1->getAddress(&sock1addr);
+  sock2->getAddress(&sock2addr);
+  sock3->getAddress(&sock3addr);
+  sock4->getAddress(&sock4addr);
+  sock5->getAddress(&sock5addr);
+  sock6->getAddress(&sock6addr);
+
+  serverSocket->setCallbackAssignFunction(
+      [&](AsyncServerSocket*, NetworkSocket sock) {
+        struct sockaddr_in remoteAddr;
+        socklen_t addrLen = sizeof(sockaddr_in);
+        ::getpeername(sock.toFd(), (struct sockaddr*)&remoteAddr, &addrLen);
+        auto remotePort = ::ntohs(remoteAddr.sin_port);
+        if (remotePort == sock1addr.getPort() ||
+            remotePort == sock2addr.getPort() ||
+            remotePort == sock3addr.getPort()) {
+          return 0;
+        } else if (
+            remotePort == sock4addr.getPort() ||
+            remotePort == sock5addr.getPort()) {
+          return 1;
+        } else if (remotePort == sock6addr.getPort()) {
+          return 2;
+        }
+        return -1;
+      });
+
+  // Test having callbacks remove other callbacks before them on the list,
+  serverSocket->addAcceptCallback(&cb1, &evb1);
+  serverSocket->addAcceptCallback(&cb2, &evb2);
+  serverSocket->addAcceptCallback(&cb3, &evb3);
+  serverSocket->startAccepting();
+
+  std::vector<std::thread> threads;
+  threads.emplace_back([&]() { eventBase.loop(); });
+  threads.emplace_back([&]() { evb1.loop(); });
+  threads.emplace_back([&]() { evb2.loop(); });
+  threads.emplace_back([&]() { evb3.loop(); });
+
+  for (auto& t : threads) {
+    t.join();
+  }
+
+  ASSERT_EQ(cb1Count, 3);
+  ASSERT_EQ(cb2Count, 2);
+  ASSERT_EQ(cb3Count, 1);
+}
+
 /**
  * Test AsyncServerSocket::removeAcceptCallback()
  */
@@ -2540,7 +2726,9 @@ TEST(AsyncSocketTest, OtherThreadAcceptCallback) {
   ASSERT_EQ(cb1.getEvents()->at(2).type, TestAcceptCallback::TYPE_STOP);
 }
 
-void serverSocketSanityTest(AsyncServerSocket* serverSocket) {
+void serverSocketSanityTest(
+    AsyncServerSocket* serverSocket,
+    std::optional<folly::SocketAddress> address = std::nullopt) {
   EventBase* eventBase = serverSocket->getEventBase();
   CHECK(eventBase);
 
@@ -2558,7 +2746,11 @@ void serverSocketSanityTest(AsyncServerSocket* serverSocket) {
 
   // Connect to the server socket
   folly::SocketAddress serverAddress;
-  serverSocket->getAddress(&serverAddress);
+  if (address) {
+    serverAddress = *address;
+  } else {
+    serverSocket->getAddress(&serverAddress);
+  }
   AsyncSocket::UniquePtr socket(new AsyncSocket(eventBase, serverAddress));
 
   // Loop to process all events
@@ -2763,6 +2955,86 @@ TEST(AsyncSocketTest, UnixDomainSocketTest) {
   ASSERT_EQ(flags & O_NONBLOCK, O_NONBLOCK);
 #endif
 }
+
+#if defined(__linux__)
+TEST(AsyncSocketTest, VsockSocketLocal) {
+  EventBase eventBase;
+
+  sockaddr_vm addr{};
+  memset(&addr, 0, sizeof(addr));
+  addr.svm_family = AF_VSOCK;
+  addr.svm_cid = VMADDR_CID_LOCAL;
+  addr.svm_port = VMADDR_PORT_ANY;
+
+  folly::SocketAddress address;
+  address.setFromSockaddr(&addr);
+
+  AsyncServerSocket::UniquePtr serverSocket(new AsyncServerSocket(&eventBase));
+  serverSocket->bind(address);
+  serverSocket->listen(16);
+
+  auto actualAddress = serverSocket->getAddress();
+  EXPECT_NE(actualAddress.getVsockPort(), VMADDR_PORT_ANY);
+
+  serverSocketSanityTest(serverSocket.get());
+}
+#endif
+
+#if defined(__linux__)
+TEST(AsyncSocketTest, VsockSocketAny) {
+  EventBase eventBase;
+
+  sockaddr_vm addr{};
+  memset(&addr, 0, sizeof(addr));
+  addr.svm_family = AF_VSOCK;
+  addr.svm_cid = VMADDR_CID_ANY;
+  addr.svm_port = VMADDR_PORT_ANY;
+
+  folly::SocketAddress address;
+  address.setFromSockaddr(&addr);
+
+  AsyncServerSocket::UniquePtr serverSocket(new AsyncServerSocket(&eventBase));
+  serverSocket->bind(address);
+  serverSocket->listen(16);
+
+  auto actualAddress = serverSocket->getAddress();
+  EXPECT_NE(actualAddress.getVsockPort(), VMADDR_PORT_ANY);
+
+  addr.svm_cid = VMADDR_CID_LOCAL;
+  addr.svm_port = actualAddress.getVsockPort();
+  address.setFromSockaddr(&addr);
+
+  serverSocketSanityTest(serverSocket.get(), address);
+}
+#endif
+
+#if defined(__linux__)
+TEST(AsyncSocketTest, VsockSocketPortAny) {
+  EventBase eventBase;
+
+  sockaddr_vm addr{};
+  memset(&addr, 0, sizeof(addr));
+  addr.svm_family = AF_VSOCK;
+  addr.svm_cid = VMADDR_CID_LOCAL;
+  addr.svm_port = VMADDR_PORT_ANY;
+
+  folly::SocketAddress address;
+  address.setFromSockaddr(&addr);
+
+  AsyncServerSocket::UniquePtr serverSocket1(new AsyncServerSocket(&eventBase));
+  serverSocket1->bind(address);
+  serverSocket1->listen(16);
+
+  AsyncServerSocket::UniquePtr serverSocket2(new AsyncServerSocket(&eventBase));
+  serverSocket2->bind(address);
+  serverSocket2->listen(16);
+
+  EXPECT_NE(serverSocket1->getAddress().getVsockPort(), VMADDR_PORT_ANY);
+  EXPECT_NE(
+      serverSocket1->getAddress().getVsockPort(),
+      serverSocket2->getAddress().getVsockPort());
+}
+#endif
 
 TEST(AsyncSocketTest, ConnectionEventCallbackDefault) {
   EventBase eventBase;

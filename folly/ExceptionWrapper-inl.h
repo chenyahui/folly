@@ -25,15 +25,12 @@ struct exception_wrapper::with_exception_from_fn_ {
   };
   struct impl_arg_ {
     template <typename F>
-    using apply = typename function_traits<F>::template argument<0>;
+    using apply = function_arguments_element_t<0, F>;
   };
   struct impl_bye_;
-  template <
-      typename Sig,
-      typename Traits = function_traits<Sig>,
-      std::size_t NArgs = Traits::template arguments<type_pack_size_t>::value>
+  template <typename Sig, std::size_t NArgs = function_arguments_size_v<Sig>>
   using impl_ = conditional_t<
-      Traits::is_variadic,
+      function_is_variadic_v<Sig>,
       impl_var_,
       conditional_t<NArgs == 1, impl_arg_, impl_bye_>>;
 
@@ -63,30 +60,15 @@ struct exception_wrapper::with_exception_from_ex_ {
   using apply = Ex;
 };
 
-// The libc++ and cpplib implementations do not have a move constructor or a
-// move-assignment operator. To avoid refcount operations, we must improvise.
-// The libstdc++ implementation has a move constructor and a move-assignment
-// operator but having this does no harm.
-inline std::exception_ptr exception_wrapper::extract_(
-    std::exception_ptr&& ptr) noexcept {
-  constexpr auto sz = sizeof(std::exception_ptr);
-  // assume relocatability on all platforms
-  // assume nrvo for performance
-  std::exception_ptr ret;
-  std::memcpy(static_cast<void*>(&ret), &ptr, sz);
-  std::memset(static_cast<void*>(&ptr), 0, sz);
-  return ret;
-}
-
 inline exception_wrapper::exception_wrapper(exception_wrapper&& that) noexcept
-    : ptr_{extract_(std::move(that.ptr_))} {}
+    : ptr_{detail::extract_exception_ptr(std::move(that.ptr_))} {}
 
 inline exception_wrapper::exception_wrapper(
     std::exception_ptr const& ptr) noexcept
     : ptr_{ptr} {}
 
 inline exception_wrapper::exception_wrapper(std::exception_ptr&& ptr) noexcept
-    : ptr_{extract_(std::move(ptr))} {}
+    : ptr_{detail::extract_exception_ptr(std::move(ptr))} {}
 
 template <
     class Ex,
@@ -158,21 +140,32 @@ inline std::exception const* exception_wrapper::get_exception() const noexcept {
 
 template <typename Ex>
 inline Ex* exception_wrapper::get_exception() noexcept {
-  return exception_ptr_get_object_hint<Ex>(ptr_, tag<Ex>);
+  return exception_ptr_get_object_hint<Ex>(ptr_);
 }
 
 template <typename Ex>
 inline Ex const* exception_wrapper::get_exception() const noexcept {
-  return exception_ptr_get_object_hint<Ex>(ptr_, tag<Ex>);
+  return exception_ptr_get_object_hint<Ex>(ptr_);
 }
 
-inline std::exception_ptr exception_wrapper::to_exception_ptr() const noexcept {
+inline std::exception_ptr exception_wrapper::to_exception_ptr()
+    const& noexcept {
   return ptr_;
 }
 
-inline std::exception_ptr const& exception_wrapper::exception_ptr_ref()
-    const noexcept {
+inline std::exception_ptr& exception_wrapper::exception_ptr() & noexcept {
   return ptr_;
+}
+inline std::exception_ptr const& exception_wrapper::exception_ptr()
+    const& noexcept {
+  return ptr_;
+}
+inline std::exception_ptr&& exception_wrapper::exception_ptr() && noexcept {
+  return std::move(ptr_);
+}
+inline std::exception_ptr const&& exception_wrapper::exception_ptr()
+    const&& noexcept {
+  return std::move(ptr_);
 }
 
 inline std::type_info const* exception_wrapper::type() const noexcept {

@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "dwarf",
     srcs = [
         "Dwarf.cpp",
@@ -34,7 +36,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "elf",
     srcs = [
         "Elf.cpp",
@@ -62,7 +65,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "symbolized_frame",
     srcs = ["SymbolizedFrame.cpp"],
     headers = ["SymbolizedFrame.h"],
@@ -71,7 +75,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "line_reader",
     srcs = ["LineReader.cpp"],
     headers = ["LineReader.h"],
@@ -83,7 +88,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "stack_trace",
     srcs = ["StackTrace.cpp"],
     headers = ["StackTrace.h"],
@@ -99,7 +105,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "elf_cache",
     srcs = [
         "ElfCache.cpp",
@@ -124,7 +131,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "symbolize_printer",
     srcs = [
         "SymbolizePrinter.cpp",
@@ -146,7 +154,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "symbolizer",
     srcs = [
         "Symbolizer.cpp",
@@ -160,9 +169,9 @@ cpp_library(
         "//folly:scope_guard",
         "//folly:synchronized",
         "//folly/container:evicting_cache_map",
+        "//folly/debugging/symbolizer/detail:debug",
         "//folly/experimental/symbolizer:elf",
         "//folly/experimental/symbolizer:line_reader",
-        "//folly/experimental/symbolizer/detail:debug",
         "//folly/lang:safe_assert",
         "//folly/lang:to_ascii",
         "//folly/memory:sanitize_address",
@@ -185,7 +194,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "signal_handler",
     srcs = [
         "SignalHandler.cpp",

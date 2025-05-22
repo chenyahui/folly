@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "asymmetric_thread_fence",
     srcs = ["AsymmetricThreadFence.cpp"],
     headers = ["AsymmetricThreadFence.h"],
@@ -18,7 +20,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "atomic_ref",
     headers = ["AtomicRef.h"],
     exported_deps = [
@@ -27,7 +30,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "atomic_util",
     headers = [
         "AtomicUtil.h",
@@ -41,7 +45,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "atomic_notification",
     srcs = [
         "AtomicNotification.cpp",
@@ -57,7 +62,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "atomic_struct",
     headers = ["AtomicStruct.h"],
     exported_deps = [
@@ -67,7 +73,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "baton",
     headers = ["Baton.h"],
     exported_deps = [
@@ -82,7 +89,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "call_once",
     headers = ["CallOnce.h"],
     exported_deps = [
@@ -94,7 +102,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "distributed_mutex",
     srcs = [
         "DistributedMutex.cpp",
@@ -128,7 +137,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "hazptr",
     srcs = [
         "Hazptr.cpp",
@@ -168,7 +178,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "hazptr_thread_pool_executor",
     srcs = ["HazptrThreadPoolExecutor.cpp"],
     headers = [
@@ -183,7 +194,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "latch",
     headers = ["Latch.h"],
     exported_deps = [
@@ -194,7 +206,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "lifo_sem",
     headers = ["LifoSem.h"],
     exported_deps = [
@@ -211,7 +224,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "lock",
     headers = ["Lock.h"],
     exported_deps = [
@@ -223,7 +237,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "micro_spin_lock",
     headers = ["MicroSpinLock.h"],
     exported_deps = [
@@ -234,7 +249,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "native_semaphore",
     headers = ["NativeSemaphore.h"],
     exported_deps = [
@@ -244,7 +260,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "pico_spin_lock",
     headers = ["PicoSpinLock.h"],
     exported_deps = [
@@ -257,7 +274,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "parking_lot",
     srcs = [
         "ParkingLot.cpp",
@@ -272,7 +290,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "rcu",
     srcs = [
         "Rcu.cpp",
@@ -293,7 +312,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "rw_spin_lock",
     headers = ["RWSpinLock.h"],
     exported_deps = [
@@ -304,12 +324,14 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "relaxed_atomic",
     headers = ["RelaxedAtomic.h"],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "sanitize_thread",
     srcs = [
         "SanitizeThread.cpp",
@@ -323,7 +345,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "saturating_semaphore",
     headers = ["SaturatingSemaphore.h"],
     exported_deps = [
@@ -340,7 +363,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "small_locks",
     headers = ["SmallLocks.h"],
     exported_deps = [
@@ -351,7 +375,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "wait_options",
     srcs = ["WaitOptions.cpp"],
     headers = ["WaitOptions.h"],
@@ -363,7 +388,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "delayed_init",
     headers = ["DelayedInit.h"],
     exported_deps = [
@@ -372,7 +398,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "throttled_lifo_sem",
     headers = [
         "ThrottledLifoSem.h",
@@ -389,7 +416,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "flat_combining",
     headers = ["FlatCombining.h"],
     exported_deps = [
@@ -402,7 +430,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "event_count",
     headers = ["EventCount.h"],
     exported_deps = [

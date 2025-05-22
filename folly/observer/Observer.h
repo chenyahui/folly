@@ -196,19 +196,32 @@ class Snapshot {
    */
   size_t getVersion() const { return version_; }
 
+  /**
+   * Return the time at which the observed object was created.
+   */
+  std::chrono::system_clock::time_point getTimeCreated() const {
+    return timeCreated_;
+  }
+
  private:
   friend class Observer<T>;
 
+  using TimePoint = observer_detail::Core::VersionedData::TimePoint;
   Snapshot(
       const observer_detail::Core& core,
       std::shared_ptr<const T> data,
-      size_t version)
-      : data_(std::move(data)), version_(version), core_(&core) {
+      size_t version,
+      TimePoint timeCreated)
+      : data_(std::move(data)),
+        version_(version),
+        timeCreated_(timeCreated),
+        core_(&core) {
     DCHECK(data_);
   }
 
   std::shared_ptr<const T> data_;
   size_t version_;
+  TimePoint timeCreated_;
   const observer_detail::Core* core_;
 };
 
@@ -269,6 +282,10 @@ class Observer {
 
   const std::type_info* getCreatorTypeInfo() const {
     return core_->getCreatorContext().typeInfo;
+  }
+
+  const std::type_info* getCreatorInvokeResultTypeInfo() const {
+    return core_->getCreatorContext().invokeResultTypeInfo;
   }
 
   const std::string& getCreatorName() const {
@@ -356,7 +373,7 @@ class AtomicObserver {
   T get() const;
   T operator*() const { return get(); }
 
-  Observer<T> getUnderlyingObserver() const { return observer_; }
+  const Observer<T>& getUnderlyingObserver() const { return observer_; }
 
  private:
   mutable std::atomic<T> cachedValue_{};
@@ -375,7 +392,7 @@ class TLObserver {
   const Snapshot<T>& getSnapshotRef() const;
   const Snapshot<T>& operator*() const { return getSnapshotRef(); }
 
-  Observer<T> getUnderlyingObserver() const { return observer_; }
+  const Observer<T>& getUnderlyingObserver() const { return observer_; }
 
  private:
   Observer<T> observer_;
@@ -393,7 +410,7 @@ class ReadMostlyAtomicObserver {
   T get() const;
   T operator*() const { return get(); }
 
-  Observer<T> getUnderlyingObserver() const { return observer_; }
+  const Observer<T>& getUnderlyingObserver() const { return observer_; }
 
  private:
   Observer<T> observer_;

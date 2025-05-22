@@ -1,4 +1,5 @@
-load("//folly/docs:defs.bzl", "copy", "html")
+load("@fbcode//folly/docs:defs.bzl", "copy", "html")
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 
 #
 # Actual listing of source files
@@ -6,43 +7,98 @@ load("//folly/docs:defs.bzl", "copy", "html")
 
 oncall("fbcode_entropy_wardens_folly")
 
-html("AtomicHashMap.md")
+fbcode_target(
+    _kind = html,
+    src = "AtomicHashMap.md",
+)
 
-html("Benchmark.md")
+fbcode_target(
+    _kind = html,
+    src = "Benchmark.md",
+)
 
-html("Conv.md")
+fbcode_target(
+    _kind = html,
+    src = "Conv.md",
+)
 
-html("Dynamic.md")
+fbcode_target(
+    _kind = html,
+    src = "Dynamic.md",
+)
 
-html("FBString.md")
+fbcode_target(
+    _kind = html,
+    src = "FBString.md",
+)
 
-html(
-    "FBVector.md",
+fbcode_target(
+    _kind = html,
+    src = "FBVector.md",
     support = ["Fbvector--graphical_solutions.png"],
 )
 
-html("Format.md")
+fbcode_target(
+    _kind = html,
+    src = "Format.md",
+)
 
-html("GroupVarint.md")
+fbcode_target(
+    _kind = html,
+    src = "GroupVarint.md",
+)
 
-html("Histogram.md")
+fbcode_target(
+    _kind = html,
+    src = "Histogram.md",
+)
 
-html("PackedSyncPtr.md")
+fbcode_target(
+    _kind = html,
+    src = "PackedSyncPtr.md",
+)
 
-html("Poly.md")
+fbcode_target(
+    _kind = html,
+    src = "Poly.md",
+)
 
-html("ProducerConsumerQueue.md")
+fbcode_target(
+    _kind = html,
+    src = "ProducerConsumerQueue.md",
+)
 
-html("SmallLocks.md")
+fbcode_target(
+    _kind = html,
+    src = "SmallLocks.md",
+)
 
-html("small_vector.md")
+fbcode_target(
+    _kind = html,
+    src = "small_vector.md",
+)
 
-html("Synchronized.md")
+fbcode_target(
+    _kind = html,
+    src = "Synchronized.md",
+)
 
-html("ThreadCachedInt.md")
+fbcode_target(
+    _kind = html,
+    src = "ThreadCachedInt.md",
+)
 
-html("ThreadLocal.md")
+fbcode_target(
+    _kind = html,
+    src = "ThreadLocal.md",
+)
 
-html("Traits.md")
+fbcode_target(
+    _kind = html,
+    src = "Traits.md",
+)
 
-copy("style.css")
+fbcode_target(
+    _kind = copy,
+    path = "style.css",
+)

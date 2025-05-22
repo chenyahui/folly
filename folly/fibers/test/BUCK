@@ -1,10 +1,12 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "fibers_benchmark",
     srcs = ["FibersBenchmark.cpp"],
     headers = [],
@@ -18,7 +20,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "fibers_test",
     srcs = ["FibersTest.cpp"],
     headers = [],
@@ -52,7 +55,8 @@ cpp_unittest(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "fibers_test_app",
     srcs = ["FibersTestApp.cpp"],
     headers = [],
@@ -63,7 +67,8 @@ cpp_binary(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "stack_overflow",
     srcs = ["StackOverflow.cpp"],
     headers = [],
@@ -74,7 +79,8 @@ cpp_binary(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "semaphore_test",
     srcs = ["SemaphoreTest.cpp"],
     headers = [],
@@ -83,5 +89,15 @@ cpp_unittest(
         "//folly/portability:gtest",
         "//folly/synchronization:relaxed_atomic",
         "//folly/synchronization/detail:sleeper",
+    ],
+)
+
+fbcode_target(
+    _kind = cpp_unittest,
+    name = "batch_semaphore_test",
+    srcs = ["BatchSemaphoreTest.cpp"],
+    deps = [
+        "//folly/fibers:batch_semaphore",
+        "//folly/portability:gtest",
     ],
 )

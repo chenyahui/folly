@@ -19,6 +19,9 @@
 #include <sys/types.h>
 
 #include <chrono>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include <boost/container/flat_set.hpp>
 #include <glog/logging.h>
@@ -26,12 +29,16 @@
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/Format.h>
+#include <folly/Memory.h>
 #include <folly/String.h>
+#include <folly/container/span.h>
 #include <folly/experimental/io/FsUtil.h>
 #include <folly/gen/Base.h>
 #include <folly/gen/File.h>
 #include <folly/gen/String.h>
+#include <folly/portability/GMock.h>
 #include <folly/portability/GTest.h>
+#include <folly/portability/SysSyscall.h>
 #include <folly/portability/Unistd.h>
 #include <folly/testing/TestUtil.h>
 
@@ -39,6 +46,8 @@ FOLLY_GNU_DISABLE_WARNING("-Wdeprecated-declarations")
 
 using namespace folly;
 using namespace std::chrono_literals;
+using namespace std::string_literals;
+using namespace std::string_view_literals;
 
 namespace std::chrono {
 template <typename Rep, typename Period>
@@ -51,20 +60,92 @@ void PrintTo(std::chrono::duration<Rep, Period> duration, std::ostream* out) {
 } // namespace std::chrono
 
 namespace {
-// Wait for the given subprocess to write anything in stdout to ensure
-// it has started.
-bool waitForAnyOutput(Subprocess& proc) {
-  // We couldn't use communicate here because it blocks until the
-  // stdout/stderr is closed.
-  char buffer;
-  ssize_t len;
-  do {
-    len = fileops::read(proc.stdoutFd(), &buffer, 1);
-  } while (len == -1 && errno == EINTR);
-  LOG(INFO) << "Read " << buffer;
-  return len == 1;
+sigset_t makeSignalMask(folly::span<int const> signals) {
+  sigset_t sigmask;
+  sigemptyset(&sigmask);
+  for (auto sig : signals) {
+    sigaddset(&sigmask, sig);
+  }
+  return sigmask;
 }
+
+struct ScopedSignalMaskOverride {
+  sigset_t sigmask;
+  explicit ScopedSignalMaskOverride(folly::span<int const> signals) {
+    auto target = makeSignalMask(signals);
+    PCHECK(0 == pthread_sigmask(SIG_SETMASK, &target, &sigmask));
+  }
+  ~ScopedSignalMaskOverride() {
+    PCHECK(0 == pthread_sigmask(SIG_SETMASK, &sigmask, nullptr));
+  }
+};
+
+uint64_t readSignalMask(sigset_t sigmask) {
+  static_assert(NSIG - 1 <= 64); // 0 is not a signal
+  uint64_t ret = 0;
+  for (int sig = 1; sig < NSIG; ++sig) {
+    if (sigismember(&sigmask, sig)) {
+      ret |= (uint64_t(1) << (sig - 1));
+    }
+  }
+  return ret;
+}
+
+sigset_t getCurrentSignalMask() {
+  sigset_t sigmask;
+  pthread_sigmask(SIG_SETMASK, nullptr, &sigmask);
+  return sigmask;
+}
+
+std::string_view readOneLineOfProcSelfStatus(
+    std::string_view text, std::string_view key) {
+  std::vector<std::string_view> lines;
+  folly::split('\n', text, lines);
+  auto prefix = fmt::format("{}:", key);
+  auto iter = std::find_if(lines.begin(), lines.end(), [&](auto line) {
+    return folly::StringPiece(line).starts_with(prefix);
+  });
+  if (iter == lines.end()) {
+    return {};
+  }
+  auto line = *iter;
+  line.remove_prefix(prefix.size());
+  while (!line.empty() && std::isspace(line[0])) {
+    line.remove_prefix(1);
+  }
+  return line;
+}
+
 } // namespace
+
+struct SubprocessFdActionsListTest : testing::Test {};
+
+TEST_F(SubprocessFdActionsListTest, stress) {
+  std::mt19937 rng;
+  std::uniform_int_distribution<size_t> dist{0, 255};
+  for (size_t sz = 0; sz < 128; ++sz) {
+    std::map<int, int> map;
+    for (size_t i = 0; i < sz; ++i) {
+      while (true) {
+        auto n = dist(rng);
+        if (map.count(n)) {
+          continue;
+        }
+        map[int(n)] = -int(n);
+        break;
+      }
+    }
+    std::vector<std::pair<int, int>> vec{map.begin(), map.end()};
+    detail::SubprocessFdActionsList list{vec};
+    for (size_t fd = 0; fd < 256; ++fd) {
+      auto found = list.find(fd);
+      EXPECT_EQ(map.contains(fd), found != nullptr);
+      if (found) {
+        EXPECT_EQ(-int(fd), *found);
+      }
+    }
+  }
+}
 
 TEST(SimpleSubprocessTest, ExitsSuccessfully) {
   Subprocess proc(std::vector<std::string>{"/bin/true"});
@@ -74,29 +155,6 @@ TEST(SimpleSubprocessTest, ExitsSuccessfully) {
 TEST(SimpleSubprocessTest, ExitsSuccessfullyChecked) {
   Subprocess proc(std::vector<std::string>{"/bin/true"});
   proc.waitChecked();
-}
-
-TEST(SimpleSubprocessTest, CloneFlagsWithVfork) {
-  Subprocess proc(
-      std::vector<std::string>{"/bin/true"},
-      Subprocess::Options().useCloneWithFlags(SIGCHLD | CLONE_VFORK));
-  EXPECT_EQ(0, proc.wait().exitStatus());
-}
-
-TEST(SimpleSubprocessTest, CloneFlagsWithFork) {
-  Subprocess proc(
-      std::vector<std::string>{"/bin/true"},
-      Subprocess::Options().useCloneWithFlags(SIGCHLD));
-  EXPECT_EQ(0, proc.wait().exitStatus());
-}
-
-TEST(SimpleSubprocessTest, CloneFlagsSubprocessCtorExitsAfterExec) {
-  Subprocess proc(
-      std::vector<std::string>{"/bin/sleep", "3600"},
-      Subprocess::Options().useCloneWithFlags(SIGCHLD));
-  checkUnixError(::kill(proc.pid(), SIGKILL), "kill");
-  auto retCode = proc.wait();
-  EXPECT_TRUE(retCode.killed());
 }
 
 TEST(SimpleSubprocessTest, ExitsWithError) {
@@ -118,6 +176,7 @@ TEST(SimpleSubprocessTest, MoveSubprocess) {
   Subprocess old_proc(std::vector<std::string>{"/bin/true"});
   EXPECT_TRUE(old_proc.returnCode().running());
   auto new_proc = std::move(old_proc);
+  // NOLINTNEXTLINE(bugprone-use-after-move)
   EXPECT_TRUE(old_proc.returnCode().notStarted());
   EXPECT_TRUE(new_proc.returnCode().running());
   EXPECT_EQ(0, new_proc.wait().exitStatus());
@@ -202,15 +261,23 @@ TEST(SimpleSubprocessTest, ChangeChildDirectoryWithError) {
 }
 
 TEST(SimpleSubprocessTest, waitOrTerminateOrKillWaitsIfProcessExits) {
-  Subprocess proc(std::vector<std::string>{"/bin/sleep", "0.1"});
+  auto const opts =
+      Subprocess::Options()
+          .stdinFd(Subprocess::DEV_NULL)
+          .stdoutFd(Subprocess::DEV_NULL);
+  Subprocess proc(std::vector<std::string>{"/bin/cat"}, opts);
   auto retCode = proc.waitOrTerminateOrKill(1s, 1s);
   EXPECT_TRUE(retCode.exited());
   EXPECT_EQ(0, retCode.exitStatus());
 }
 
 TEST(SimpleSubprocessTest, waitOrTerminateOrKillTerminatesIfTimeout) {
-  Subprocess proc(std::vector<std::string>{"/bin/sleep", "60"});
-  auto retCode = proc.waitOrTerminateOrKill(1s, 1s);
+  auto const opts =
+      Subprocess::Options() //
+          .pipeStdin()
+          .stdoutFd(Subprocess::DEV_NULL);
+  Subprocess proc(std::vector<std::string>{"/bin/cat"}, opts);
+  auto retCode = proc.waitOrTerminateOrKill(10ms, 10ms);
   EXPECT_TRUE(retCode.killed());
   EXPECT_EQ(SIGTERM, retCode.killSignal());
 }
@@ -230,8 +297,13 @@ TEST(
 }
 
 TEST(SubprocessTest, FatalOnDestroy) {
+  auto const opts =
+      Subprocess::Options() //
+          .pipeStdin()
+          .pipeStdout()
+          .pipeStderr();
   EXPECT_DEATH(
-      []() { Subprocess proc(std::vector<std::string>{"/bin/sleep", "10"}); }(),
+      Subprocess(std::vector<std::string>{"/bin/cat"}, opts),
       "Subprocess destroyed without reaping child");
 }
 
@@ -248,32 +320,56 @@ TEST(SubprocessTest, KillOnDestroy) {
   EXPECT_EQ(ESRCH, errno);
 }
 
+#if defined(__linux__)
+
 TEST(SubprocessTest, TerminateOnDestroy) {
+  // Enabled only on Linux because this test uses pidfd, which is Linux-only.
+  // V.s. attempting to kill() a pid that was already wait()ed to check for an
+  // error returned from kill(), which is subject to races on the system.
+  auto pidfd = -1;
   pid_t pid;
   std::chrono::steady_clock::time_point start;
-  const auto terminateTimeout = 500ms;
+  const auto terminateTimeout = 100ms;
   {
-    // Spawn a process that ignores SIGTERM
-    Subprocess proc(
-        std::vector<std::string>{
-            "/bin/bash",
-            "-c",
-            "trap \"sleep 120\" SIGTERM; echo ready; sleep 60"},
-        Subprocess::Options()
+    sigset_t mask;
+    sigfillset(&mask);
+    auto const opts =
+        Subprocess::Options() //
+            .pipeStdin()
             .pipeStdout()
             .pipeStderr()
-            .terminateChildOnDestruction(terminateTimeout));
+            .setSignalMask(mask)
+            .terminateChildOnDestruction(terminateTimeout);
+    // Spawn a process that ignores SIGTERM
+    Subprocess proc(std::vector<std::string>{"/bin/cat"}, opts);
     pid = proc.pid();
-    // Wait to make sure bash has installed the SIGTERM trap before we proceed;
-    // otherwise the test can fail if we kill the process before it starts
-    // ignoring SIGTERM.
-    EXPECT_TRUE(waitForAnyOutput(proc));
+    pidfd = syscall(SYS_pidfd_open, pid, /* flags = */ 0);
+    PCHECK(-1 != pidfd);
+    {
+      auto rc = syscall(
+          SYS_pidfd_send_signal,
+          pidfd,
+          SIGTERM,
+          /* info = */ nullptr,
+          /* flags = */ 0);
+      PCHECK(0 == rc);
+    }
     start = std::chrono::steady_clock::now();
   }
   const auto end = std::chrono::steady_clock::now();
   // The process should no longer exist.
-  EXPECT_EQ(-1, kill(pid, 0));
-  EXPECT_EQ(ESRCH, errno);
+  {
+    auto rc = syscall(
+        SYS_pidfd_send_signal,
+        pidfd,
+        SIGTERM,
+        /* info = */ nullptr,
+        /* flags = */ 0);
+    auto const err = errno;
+    PCHECK(-1 == rc);
+    EXPECT_EQ(ESRCH, err);
+  }
+  close(pidfd);
   // It should have taken us roughly terminateTimeout in the destructor
   // to wait for the child to exit after SIGTERM before we gave up and sent
   // SIGKILL.
@@ -281,6 +377,8 @@ TEST(SubprocessTest, TerminateOnDestroy) {
   EXPECT_GE(destructorDuration, terminateTimeout);
   EXPECT_LT(destructorDuration, terminateTimeout + 5s);
 }
+
+#endif
 
 // This method verifies terminateOrKill shouldn't affect the exit
 // status if the process has exited already.
@@ -300,11 +398,8 @@ TEST(SimpleSubprocessTest, TerminateAfterProcessExit) {
 TEST(SimpleSubprocessTest, TerminateWithoutKill) {
   // Start a bash process that would sleep for 60 seconds, and the
   // default signal handler should exit itself upon receiving SIGTERM.
-  Subprocess proc(
-      std::vector<std::string>{
-          "/bin/bash", "-c", "echo TerminateWithoutKill; sleep 60"},
-      Subprocess::Options().pipeStdout().pipeStderr());
-  EXPECT_TRUE(waitForAnyOutput(proc));
+  auto const opts = Subprocess::Options().pipeStdin().pipeStdout().pipeStderr();
+  Subprocess proc(std::vector<std::string>{"/bin/cat"}, opts);
   auto retCode = proc.terminateOrKill(1s);
   EXPECT_TRUE(retCode.killed());
   EXPECT_EQ(SIGTERM, retCode.killSignal());
@@ -313,10 +408,8 @@ TEST(SimpleSubprocessTest, TerminateWithoutKill) {
 TEST(SimpleSubprocessTest, TerminateOrKillZeroTimeout) {
   // Using terminateOrKill() with a 0s timeout should immediately kill the
   // process with SIGKILL without bothering to attempt SIGTERM.
-  Subprocess proc(
-      std::vector<std::string>{"/bin/bash", "-c", "echo ready; sleep 60"},
-      Subprocess::Options().pipeStdout().pipeStderr());
-  EXPECT_TRUE(waitForAnyOutput(proc));
+  auto const opts = Subprocess::Options().pipeStdin().pipeStdout().pipeStderr();
+  Subprocess proc(std::vector<std::string>{"/bin/cat"}, opts);
   auto retCode = proc.terminateOrKill(0s);
   EXPECT_TRUE(retCode.killed());
   EXPECT_EQ(SIGKILL, retCode.killSignal());
@@ -325,17 +418,16 @@ TEST(SimpleSubprocessTest, TerminateOrKillZeroTimeout) {
 // This method tests that if the subprocess ignores SIGTERM, we have
 // to use SIGKILL to kill it when calling terminateOrKill.
 TEST(SimpleSubprocessTest, KillAfterTerminate) {
-  Subprocess proc(
-      std::vector<std::string>{
-          "/bin/bash",
-          "-c",
-          // use trap to register handler that sleeps for 60 seconds
-          // upon receiving SIGTERM, so SIGKILL would be triggered to
-          // kill it.
-          "trap \"sleep 120\" SIGTERM; echo KillAfterTerminate; sleep 60"},
-      Subprocess::Options().pipeStdout().pipeStderr());
-  EXPECT_TRUE(waitForAnyOutput(proc));
-  auto retCode = proc.terminateOrKill(1s);
+  sigset_t mask;
+  sigfillset(&mask);
+  auto const opts =
+      Subprocess::Options() //
+          .pipeStdin()
+          .pipeStdout()
+          .pipeStderr()
+          .setSignalMask(mask);
+  Subprocess proc(std::vector<std::string>{"/bin/cat"}, opts);
+  auto retCode = proc.terminateOrKill(10ms);
   EXPECT_TRUE(retCode.killed());
   EXPECT_EQ(SIGKILL, retCode.killSignal());
 }
@@ -429,26 +521,53 @@ TEST(SimpleSubprocessTest, DetachExecFails) {
       "/no/such/file");
 }
 
-TEST(SimpleSubprocessTest, Affinity) {
 #ifdef __linux__
+
+TEST(SimpleSubprocessTest, AffinitySuccess) {
   cpu_set_t cpuSet0;
   CPU_ZERO(&cpuSet0);
   CPU_SET(1, &cpuSet0);
   CPU_SET(2, &cpuSet0);
   CPU_SET(3, &cpuSet0);
-  Subprocess::Options options;
-  Subprocess proc(
-      std::vector<std::string>{"/bin/sleep", "5"}, options.setCpuSet(cpuSet0));
+  auto options = Subprocess::Options().pipeStdin().pipeStdout();
+  options.setCpuSet(cpuSet0);
+  Subprocess proc(std::vector<std::string>{"/bin/cat"}, options);
   EXPECT_NE(proc.pid(), -1);
   cpu_set_t cpuSet1;
   CPU_ZERO(&cpuSet1);
   auto ret = ::sched_getaffinity(proc.pid(), sizeof(cpu_set_t), &cpuSet1);
   CHECK_EQ(ret, 0);
   CHECK_EQ(::memcmp(&cpuSet0, &cpuSet1, sizeof(cpu_set_t)), 0);
-  auto retCode = proc.waitOrTerminateOrKill(1s, 1s);
-  EXPECT_TRUE(retCode.killed());
-#endif // __linux__
+  proc.communicate();
+  proc.wait();
 }
+
+TEST(SimpleSubprocessTest, AffinityFailure) {
+  cpu_set_t cpuSet0;
+  CPU_ZERO(&cpuSet0);
+  CPU_SET(16 * sysconf(_SC_NPROCESSORS_ONLN), &cpuSet0);
+  auto options = Subprocess::Options().pipeStdin().pipeStdout();
+  options.setCpuSet(cpuSet0);
+  EXPECT_THROW(
+      Subprocess(std::vector<std::string>{"/bin/cat"}, options),
+      SubprocessSpawnError);
+}
+
+TEST(SimpleSubprocessTest, AffinityFailureIntoErrnum) {
+  cpu_set_t cpuSet0;
+  CPU_ZERO(&cpuSet0);
+  CPU_SET(16 * sysconf(_SC_NPROCESSORS_ONLN), &cpuSet0);
+  auto options = Subprocess::Options().pipeStdin().pipeStdout();
+  int cpusetErrnum = 0;
+  options.setCpuSet(cpuSet0, to_shared_ptr_non_owning(&cpusetErrnum));
+  Subprocess proc(std::vector<std::string>{"/bin/cat"}, options);
+  EXPECT_NE(proc.pid(), -1);
+  EXPECT_EQ(EINVAL, cpusetErrnum);
+  proc.communicate();
+  proc.wait();
+}
+
+#endif // __linux__
 
 TEST(SimpleSubprocessTest, FromExistingProcess) {
   // Manually fork a child process using fork() without exec(), and test waiting
@@ -469,6 +588,8 @@ TEST(SimpleSubprocessTest, FromExistingProcess) {
   EXPECT_EQ(kReturnCode, retCode.exitStatus());
 }
 
+#ifdef __linux__
+
 TEST(ParentDeathSubprocessTest, ParentDeathSignal) {
   auto helper = folly::test::find_resource(
       "folly/test/subprocess_test_parent_death_helper");
@@ -488,6 +609,8 @@ TEST(ParentDeathSubprocessTest, ParentDeathSignal) {
   fs::remove(tempFile);
 }
 
+#endif
+
 TEST(PopenSubprocessTest, PopenRead) {
   Subprocess proc("ls /", Subprocess::Options().pipeStdout());
   int found = 0;
@@ -497,97 +620,6 @@ TEST(PopenSubprocessTest, PopenRead) {
     }
   };
   EXPECT_EQ(3, found);
-  proc.waitChecked();
-}
-
-// DANGER: This class runs after fork in a child processes. Be fast, the
-// parent thread is waiting, but remember that other parent threads are
-// running and may mutate your state.  Avoid mutating any data belonging to
-// the parent.  Avoid interacting with non-POD data that originated in the
-// parent.  Avoid any libraries that may internally reference non-POD data.
-// Especially beware parent mutexes -- for example, glog's LOG() uses one.
-struct WriteFileAfterFork
-    : public Subprocess::DangerousPostForkPreExecCallback {
-  explicit WriteFileAfterFork(std::string filename)
-      : filename_(std::move(filename)) {}
-  ~WriteFileAfterFork() override {}
-  int operator()() override {
-    return writeFile(std::string("ok"), filename_.c_str()) ? 0 : errno;
-  }
-  const std::string filename_;
-};
-
-TEST(AfterForkCallbackSubprocessTest, TestAfterForkCallbackSuccess) {
-  test::ChangeToTempDir td;
-  // Trigger a file write from the child.
-  WriteFileAfterFork write_cob("good_file");
-  Subprocess proc(
-      std::vector<std::string>{"/bin/echo"},
-      Subprocess::Options().dangerousPostForkPreExecCallback(&write_cob));
-  // The file gets written immediately.
-  std::string s;
-  EXPECT_TRUE(readFile(write_cob.filename_.c_str(), s));
-  EXPECT_EQ("ok", s);
-  proc.waitChecked();
-}
-
-TEST(AfterForkCallbackSubprocessTest, TestAfterForkCallbackError) {
-  test::ChangeToTempDir td;
-  // The child will try to write to a file, whose directory does not exist.
-  WriteFileAfterFork write_cob("bad/file");
-  EXPECT_THROW(
-      Subprocess proc(
-          std::vector<std::string>{"/bin/echo"},
-          Subprocess::Options().dangerousPostForkPreExecCallback(&write_cob)),
-      SubprocessSpawnError);
-  EXPECT_FALSE(fs::exists(write_cob.filename_));
-}
-
-// DANGER: This class runs after fork in a child processes. Be fast, the
-// parent thread is waiting, but remember that other parent threads are
-// running and may mutate your state.  Avoid mutating any data belonging to
-// the parent.  Avoid interacting with non-POD data that originated in the
-// parent.  Avoid any libraries that may internally reference non-POD data.
-// Especially beware parent mutexes -- for example, glog's LOG() uses one.
-struct UpdateEnvAfterFork
-    : public folly::Subprocess::DangerousPostForkPreExecCallback {
- public:
-  // [pidDest, pidDest + pidSpace] must store PID plus NUL terminator.
-  UpdateEnvAfterFork(char* pidDest, size_t pidSpace)
-      : pidDest_{pidDest}, pidSpace_{pidSpace} {}
-
-  int operator()() override {
-    size_t snprintfRes = snprintf(pidDest_, pidSpace_, "%d", getpid());
-    if (snprintfRes < 0) {
-      return errno;
-    }
-    if (snprintfRes >= pidSpace_) {
-      return ERANGE;
-    }
-    return 0;
-  }
-
- private:
-  char* pidDest_;
-  size_t pidSpace_;
-};
-
-TEST(SubprocessEnvTest, TestEnvPointerRemainsValid) {
-  // This seems to be the only way to get the pid of the child process
-  // included in the environment of the child process.
-  const std::string pidEnvVarName = "SUBPROCESS_TEST_PID";
-  constexpr int nCharsBesidesNul = 15;
-  std::vector<std::string> env = {
-      pidEnvVarName + "=" + std::string(nCharsBesidesNul, '\0')};
-  UpdateEnvAfterFork cb(
-      env.back().data() + pidEnvVarName.size() + 1, nCharsBesidesNul + 1);
-  Subprocess proc(
-      std::vector<std::string>{"/bin/sh", "-c", "echo -n $SUBPROCESS_TEST_PID"},
-      Subprocess::Options().pipeStdout().dangerousPostForkPreExecCallback(&cb),
-      nullptr,
-      &env);
-  auto out = proc.communicate();
-  EXPECT_EQ(out.first, folly::to<std::string>(proc.pid()));
   proc.waitChecked();
 }
 
@@ -883,4 +915,342 @@ TEST(CloseOtherDescriptorsSubprocessTest, ClosesFileDescriptors) {
   // stdin, stdout, stderr, and /proc/self/fd should be fds [0,3] in the child
   EXPECT_EQ("0\n1\n2\n3\n", p.first);
   proc.wait();
+}
+
+TEST(KeepFileOpenSubprocessTest, KeepsFileOpen) {
+  auto f0 = folly::File{"/dev/null"};
+  auto f1 = f0.dup();
+  auto f2 = f0.dup();
+  auto f3 = f0.dup();
+
+  f0.close(); // make space for fd 3, for ls to open /proc/self/fd
+
+  auto options =
+      Subprocess::Options()
+          .closeOtherFds()
+          .pipeStdout()
+          .fd(f1.fd(), Subprocess::NO_CLOEXEC)
+          .fd(f2.fd(), f2.fd());
+  Subprocess proc(
+      std::vector<std::string>{"/bin/ls", "/proc/self/fd"}, options);
+  auto p = proc.communicate();
+  proc.wait();
+  int fds[] = {0, 1, 2, 3, f1.fd(), f2.fd()};
+  std::sort(std::begin(fds), std::end(fds));
+  EXPECT_EQ(fmt::format("{}\n", fmt::join(fds, "\n")), p.first);
+}
+
+static_assert(
+    Subprocess::Options::kPidBufferMinSize ==
+    std::numeric_limits<pid_t>::digits10 + 2);
+
+TEST(WritePidIntoBufTest, WritesPidIntoBufTooSmall) {
+  constexpr size_t size = Subprocess::Options::kPidBufferMinSize;
+  char buf[size - 1] = {};
+  auto options = Subprocess::Options();
+  EXPECT_THROW(options.addPrintPidToBuffer(buf), std::invalid_argument);
+}
+
+TEST(WritePidIntoBufTest, WritesPidIntoBuf) {
+  constexpr size_t size = Subprocess::Options::kPidBufferMinSize;
+  char buf[size] = {};
+  std::memset(buf, 0xA5, size);
+  auto options = Subprocess::Options().addPrintPidToBuffer(buf);
+  Subprocess proc(std::vector<std::string>{"/bin/true"}, options);
+  EXPECT_EQ(fmt::format("{}", proc.pid()), buf);
+  proc.wait();
+}
+
+TEST(WritePidIntoBufTest, WritesPidIntoBufExampleEnvVar) {
+  // this test effectively duplicates WritesPidIntoBuf but may serve as a
+  // reference for how to use this feature with environment-variable storage
+  //
+  // systemd does something like this:
+  // https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#%24SYSTEMD_EXEC_PID
+  constexpr size_t size = Subprocess::Options::kPidBufferMinSize;
+  constexpr auto prefix = "FOLLY_TEST_SUBPROCESS_PID="sv;
+  std::vector<std::string> env;
+  env.emplace_back("FOLLY_TEST_GREETING=hello world");
+  auto& var = env.emplace_back(prefix);
+  var.resize(prefix.size() + size); // must be stable! no more changes to env!
+  auto buf = folly::span{var}.subspan(prefix.size());
+  auto options = Subprocess::Options().pipeStdout().addPrintPidToBuffer(buf);
+  Subprocess proc(std::vector<std::string>{"/bin/env"}, options, nullptr, &env);
+  auto pid = proc.pid();
+  auto p = proc.communicate();
+  proc.wait();
+  std::vector<std::string_view> lines;
+  folly::split('\n', p.first, lines);
+  EXPECT_THAT(lines, testing::Contains(fmt::format("{}{}", prefix, pid)));
+}
+
+#if defined(__linux__)
+
+TEST(SetSignalMask, KeepsExistingMask) {
+  // the /proc filesystem, including /proc/self/status, is linux-specific
+  ASSERT_EQ(0, readSignalMask(getCurrentSignalMask()));
+  ScopedSignalMaskOverride guard{std::array{SIGURG, SIGCHLD}};
+  auto options = Subprocess::Options().pipeStdout();
+  Subprocess proc(
+      std::vector<std::string>{"/bin/cat", "/proc/self/status"}, options);
+  auto p = proc.communicate();
+  proc.wait();
+  auto line = readOneLineOfProcSelfStatus(p.first, "SigBlk");
+  auto expected = (1 << (SIGURG - 1)) | (1 << (SIGCHLD - 1));
+  EXPECT_EQ(fmt::format("{:016x}", expected), line);
+}
+
+TEST(SetSignalMask, CanOverrideExistingMask) {
+  // the /proc filesystem, including /proc/self/status, is linux-specific
+  ASSERT_EQ(0, readSignalMask(getCurrentSignalMask()));
+  ScopedSignalMaskOverride guard{std::array{SIGURG, SIGCHLD}};
+  auto sigmask = makeSignalMask(std::array{SIGUSR1, SIGUSR2});
+  auto options = Subprocess::Options().pipeStdout().setSignalMask(sigmask);
+  Subprocess proc(
+      std::vector<std::string>{"/bin/cat", "/proc/self/status"}, options);
+  auto p = proc.communicate();
+  proc.wait();
+  auto line = readOneLineOfProcSelfStatus(p.first, "SigBlk");
+  auto expected = (1 << (SIGUSR1 - 1)) | (1 << (SIGUSR2 - 1));
+  EXPECT_EQ(fmt::format("{:016x}", expected), line);
+}
+
+TEST(SetUserGroupId, KeepsExisting) {
+  auto options = Subprocess::Options().pipeStdout();
+  Subprocess proc(
+      std::vector<std::string>{"/bin/cat", "/proc/self/status"}, options);
+  auto p = proc.communicate();
+  proc.wait();
+  auto uidline = readOneLineOfProcSelfStatus(p.first, "Uid");
+  auto gidline = readOneLineOfProcSelfStatus(p.first, "Gid");
+  auto [uid, euid, gid, egid] =
+      std::tuple{getuid(), geteuid(), getgid(), getegid()};
+  EXPECT_EQ(euid, uid);
+  EXPECT_EQ(egid, gid);
+  EXPECT_EQ(fmt::format("{}\t{}\t{}\t{}", uid, euid, uid, uid), uidline);
+  EXPECT_EQ(fmt::format("{}\t{}\t{}\t{}", gid, egid, gid, gid), gidline);
+}
+
+TEST(SetUserGroupId, CanOverrideAndReportFailure) {
+  // without elevated capabilities, the process cannot switch user/group
+  // which makes writing the unit-test for that impossible; here we just
+  // check the errors
+  auto options = Subprocess::Options().pipeStdout();
+  int errnum[4] = {};
+  options.setUid(0, to_shared_ptr_non_owning(errnum + 0));
+  options.setGid(0, to_shared_ptr_non_owning(errnum + 1));
+  options.setEUid(0, to_shared_ptr_non_owning(errnum + 2));
+  options.setEGid(0, to_shared_ptr_non_owning(errnum + 3));
+  Subprocess proc(
+      std::vector<std::string>{"/bin/cat", "/proc/self/status"}, options);
+  auto p = proc.communicate();
+  proc.wait();
+  auto uidline = readOneLineOfProcSelfStatus(p.first, "Uid");
+  auto gidline = readOneLineOfProcSelfStatus(p.first, "Gid");
+  auto [uid, euid, gid, egid] = std::tuple{
+      errnum[0] ? getuid() : 0,
+      errnum[2] ? geteuid() : 0,
+      errnum[1] ? getgid() : 0,
+      errnum[3] ? getegid() : 0};
+  EXPECT_EQ(euid, uid);
+  EXPECT_EQ(egid, gid);
+  EXPECT_EQ(fmt::format("{}\t{}\t{}\t{}", uid, euid, uid, uid), uidline);
+  EXPECT_EQ(fmt::format("{}\t{}\t{}\t{}", gid, egid, gid, gid), gidline);
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupFdAbsent) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgdirfd = ::open(cgdir.path().native().c_str(), O_DIRECTORY | O_CLOEXEC);
+  auto cgdirfdGuard = folly::makeGuard([&] { ::close(cgdirfd); });
+  auto options = Subprocess::Options();
+  options.setLinuxCGroupFd(cgdirfd);
+  EXPECT_THROW(
+      Subprocess(std::vector{"/bin/true"s}, options), SubprocessSpawnError);
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupFdAbsentIntoErrnum) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgdirfd = ::open(cgdir.path().native().c_str(), O_DIRECTORY | O_CLOEXEC);
+  auto cgdirfdGuard = folly::makeGuard([&] { ::close(cgdirfd); });
+  auto options = Subprocess::Options();
+  int errnum = 0;
+  options.setLinuxCGroupFd(cgdirfd, to_shared_ptr_non_owning(&errnum));
+  Subprocess proc(std::vector{"/bin/true"s}, options);
+  EXPECT_EQ(ENOENT, errnum) << ::strerror(errnum);
+  proc.wait();
+  EXPECT_EQ(0, proc.returnCode().exitStatus());
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupFdPresent) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgdirfd = ::open(cgdir.path().native().c_str(), O_DIRECTORY | O_CLOEXEC);
+  auto cgdirfdGuard = folly::makeGuard([&] { ::close(cgdirfd); });
+  auto cgprocs = cgdir.path() / "cgroup.procs";
+  ::creat(cgprocs.native().c_str(), 0755); // rm'd with cgdir
+  auto options = Subprocess::Options();
+  options.setLinuxCGroupFd(cgdirfd);
+  Subprocess proc(std::vector{"/bin/true"s}, options);
+  std::string s;
+  EXPECT_TRUE(readFile(cgprocs.native().c_str(), s));
+  EXPECT_EQ("0", s);
+  proc.wait();
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupFdPresentIntoErrnum) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgdirfd = ::open(cgdir.path().native().c_str(), O_DIRECTORY | O_CLOEXEC);
+  auto cgdirfdGuard = folly::makeGuard([&] { ::close(cgdirfd); });
+  auto cgprocs = cgdir.path() / "cgroup.procs";
+  ::creat(cgprocs.native().c_str(), 0755); // rm'd with cgdir
+  auto options = Subprocess::Options();
+  int errnum = 0;
+  options.setLinuxCGroupFd(cgdirfd, to_shared_ptr_non_owning(&errnum));
+  Subprocess proc(std::vector{"/bin/true"s}, options);
+  EXPECT_EQ(0, errnum) << ::strerror(errnum);
+  std::string s;
+  EXPECT_TRUE(readFile(cgprocs.native().c_str(), s));
+  EXPECT_EQ("0", s);
+  proc.wait();
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupFdPresentProcsNoOpen) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgprocs = cgdir.path() / "cgroup.procs";
+  ::creat(cgprocs.native().c_str(), 0); // rm'd with cgdir
+  auto cgdirfd = ::open(cgdir.path().native().c_str(), O_DIRECTORY | O_CLOEXEC);
+  auto cgdirfdGuard = folly::makeGuard([&] { ::close(cgdirfd); });
+  auto options = Subprocess::Options();
+  options.setLinuxCGroupFd(cgdirfd);
+  EXPECT_THROW(
+      Subprocess(std::vector{"/bin/true"s}, options), SubprocessSpawnError);
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupFdPresentProcsNoOpenIntoErrnum) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgprocs = cgdir.path() / "cgroup.procs";
+  ::creat(cgprocs.native().c_str(), 0); // rm'd with cgdir
+  auto cgdirfd = ::open(cgdir.path().native().c_str(), O_DIRECTORY | O_CLOEXEC);
+  auto cgdirfdGuard = folly::makeGuard([&] { ::close(cgdirfd); });
+  auto options = Subprocess::Options();
+  int errnum = 0;
+  options.setLinuxCGroupFd(cgdirfd, to_shared_ptr_non_owning(&errnum));
+  Subprocess proc(std::vector{"/bin/true"s}, options);
+  EXPECT_EQ(EACCES, errnum) << ::strerror(errnum);
+  proc.wait();
+  EXPECT_EQ(0, proc.returnCode().exitStatus());
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupPathAbsent) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto options = Subprocess::Options();
+  options.setLinuxCGroupPath(cgdir.path().string());
+  EXPECT_THROW(
+      Subprocess(std::vector{"/bin/true"s}, options), SubprocessSpawnError);
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupPathAbsentIntoErrnum) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto options = Subprocess::Options();
+  int errnum = 0;
+  options.setLinuxCGroupPath(
+      cgdir.path().string(), to_shared_ptr_non_owning(&errnum));
+  Subprocess proc(std::vector{"/bin/true"s}, options);
+  EXPECT_EQ(ENOENT, errnum) << ::strerror(errnum);
+  proc.wait();
+  EXPECT_EQ(0, proc.returnCode().exitStatus());
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupPathPresent) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgprocs = cgdir.path() / "cgroup.procs";
+  ::creat(cgprocs.native().c_str(), 0755); // rm'd with cgdir
+  auto options = Subprocess::Options();
+  options.setLinuxCGroupPath(cgdir.path().string());
+  Subprocess proc(std::vector{"/bin/true"s}, options);
+  std::string s;
+  EXPECT_TRUE(readFile(cgprocs.native().c_str(), s));
+  EXPECT_EQ("0", s);
+  proc.wait();
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupPathPresentIntoErrnum) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgprocs = cgdir.path() / "cgroup.procs";
+  ::creat(cgprocs.native().c_str(), 0755); // rm'd with cgdir
+  auto options = Subprocess::Options();
+  int errnum = 0;
+  options.setLinuxCGroupPath(
+      cgdir.path().string(), to_shared_ptr_non_owning(&errnum));
+  Subprocess proc(std::vector{"/bin/true"s}, options);
+  EXPECT_EQ(0, errnum) << ::strerror(errnum);
+  std::string s;
+  EXPECT_TRUE(readFile(cgprocs.native().c_str(), s));
+  EXPECT_EQ("0", s);
+  proc.wait();
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupPathPresentProcsNoOpen) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgprocs = cgdir.path() / "cgroup.procs";
+  ::creat(cgprocs.native().c_str(), 0); // rm'd with cgdir
+  auto options = Subprocess::Options();
+  options.setLinuxCGroupPath(cgdir.path().string());
+  EXPECT_THROW(
+      Subprocess(std::vector{"/bin/true"s}, options), SubprocessSpawnError);
+}
+
+TEST(SetLinuxCGroup, CanSetCGroupPathPresentProcsNoOpenIntoErrnum) {
+  folly::test::TemporaryDirectory cgdir; // not a real cgroup dir
+  auto cgprocs = cgdir.path() / "cgroup.procs";
+  ::creat(cgprocs.native().c_str(), 0); // rm'd with cgdir
+  auto options = Subprocess::Options();
+  int errnum = 0;
+  options.setLinuxCGroupPath(
+      cgdir.path().string(), to_shared_ptr_non_owning(&errnum));
+  Subprocess proc(std::vector{"/bin/true"s}, options);
+  EXPECT_EQ(EACCES, errnum) << ::strerror(errnum);
+  proc.wait();
+  EXPECT_EQ(0, proc.returnCode().exitStatus());
+}
+
+#endif
+
+TEST(SetRLimit, SetRLimitSuccess) {
+  rlimit limit;
+  ::getrlimit(RLIMIT_MEMLOCK, &limit);
+  auto limit2 = limit;
+  limit2.rlim_cur -= ::sysconf(_SC_PAGESIZE);
+  auto options = Subprocess::Options().pipeStdout();
+  options.addRLimit(RLIMIT_MEMLOCK, limit2);
+  Subprocess proc(std::vector{"/bin/ulimit"s, "-l"s}, options);
+  auto p = proc.communicate();
+  proc.wait();
+  EXPECT_EQ(fmt::format("{}\n", limit2.rlim_cur / 1024), p.first);
+}
+
+TEST(SetRLimit, SetRLimitFailure) {
+  rlimit limit;
+  ::getrlimit(RLIMIT_MEMLOCK, &limit);
+  auto limit2 = limit;
+  limit2.rlim_cur = limit2.rlim_max * 2;
+  auto options = Subprocess::Options().pipeStdout();
+  options.addRLimit(RLIMIT_MEMLOCK, limit2);
+  EXPECT_THROW(
+      Subprocess(std::vector{"/bin/ulimit"s, "-l"s}, options),
+      SubprocessSpawnError);
+}
+
+TEST(SetRLimit, SetRLimitFailureIntoErrnum) {
+  rlimit limit;
+  ::getrlimit(RLIMIT_MEMLOCK, &limit);
+  auto limit2 = limit;
+  limit2.rlim_cur = limit2.rlim_max * 2;
+  auto options = Subprocess::Options().pipeStdout();
+  int errnum = 0;
+  options.addRLimit(RLIMIT_MEMLOCK, limit2, to_shared_ptr_non_owning(&errnum));
+  Subprocess proc(std::vector{"/bin/ulimit"s, "-l"s}, options);
+  EXPECT_EQ(EINVAL, errnum);
+  auto p = proc.communicate();
+  proc.wait();
+  EXPECT_EQ(fmt::format("{}\n", limit.rlim_cur / 1024), p.first);
 }

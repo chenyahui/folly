@@ -25,14 +25,14 @@ namespace python {
 
 void GILAwareManualExecutor::add(Func callback) {
   {
-    std::lock_guard<std::mutex> lock(lock_);
+    std::lock_guard lock(lock_);
     funcs_.emplace(std::move(callback));
   }
   cv_.notify_one();
 }
 
 void GILAwareManualExecutor::waitBeforeDrive() {
-  std::unique_lock<std::mutex> lock(lock_);
+  std::unique_lock lock(lock_);
   if (!funcs_.empty()) {
     return;
   }
@@ -52,7 +52,7 @@ void GILAwareManualExecutor::driveImpl() {
   Func func;
   while (true) {
     {
-      std::lock_guard<std::mutex> lock(lock_);
+      std::lock_guard lock(lock_);
       if (funcs_.empty()) {
         break;
       }

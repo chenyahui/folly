@@ -16,12 +16,14 @@
 
 #include <folly/settings/Settings.h>
 
+#include <string_view>
 #include <thread>
 #include <vector>
 
 #include <fmt/format.h>
 
 #include <folly/Format.h>
+#include <folly/Random.h>
 #include <folly/String.h>
 #include <folly/experimental/observer/detail/ObserverManager.h>
 #include <folly/portability/GMock.h>
@@ -71,7 +73,7 @@ FOLLY_SETTING_DEFINE(
 
 /* Test user defined type support */
 struct UserDefinedType {
-  explicit UserDefinedType(folly::StringPiece value) {
+  explicit UserDefinedType(std::string_view value) {
     if (value == "a") {
       value_ = 0;
     } else if (value == "b") {
@@ -107,7 +109,7 @@ enum class UserErrorCode {
   Error,
 };
 std::invalid_argument makeConversionError(
-    const UserErrorCode& error, folly::StringPiece) {
+    const UserErrorCode& error, std::string_view) {
   return std::invalid_argument(folly::to<std::string>("UserErrorCode ", error));
 }
 folly::Expected<folly::Unit, UserErrorCode> convertTo(
@@ -343,6 +345,20 @@ TEST(Settings, basic) {
   EXPECT_EQ(
       some_ns::FOLLY_SETTING(follytest, user_defined).defaultValue(),
       some_ns::UserDefinedType("b"));
+  EXPECT_EQ(
+      *folly::settings::getDefaultValue<unsigned int>(
+          "follytest_multi_token_type"),
+      some_ns::FOLLY_SETTING(follytest, multi_token_type).defaultValue());
+  EXPECT_EQ(
+      *folly::settings::getDefaultValue<std::string>("follytest_some_flag"),
+      some_ns::FOLLY_SETTING(follytest, some_flag).defaultValue());
+  EXPECT_EQ(
+      *folly::settings::getDefaultValue<some_ns::UserDefinedType>(
+          "follytest_user_defined"),
+      some_ns::FOLLY_SETTING(follytest, user_defined).defaultValue());
+  // EXPECT_FALSE(folly::settings::getDefaultValue<int>("follytest_some_flag"));
+  // EXPECT_FALSE(folly::settings::getDefaultValue<int>("follytest_nonexisting"));
+
   {
     std::string allFlags;
     auto allMeta = folly::settings::getAllSettingsMeta();
@@ -374,6 +390,7 @@ TEST(Settings, basic) {
         FAIL() << "Unexpected type: " << meta.typeStr;
       }
       auto [value, reason] = setting.valueAndReason();
+      EXPECT_EQ(reason, setting.updateReason());
       allFlags += folly::sformat(
           "{}/{}/{}/{}/{}/{}/{}\n",
           meta.project,
@@ -884,7 +901,7 @@ TEST(Settings, concurrentAccessCount) {
     threads.emplace_back([&]() {
       barrier.wait();
       for (size_t j = 0; j < numAccessesPerThread; ++j) {
-        EXPECT_EQ(*some_ns::FOLLY_SETTING(follytest, some_flag), "default");
+        ASSERT_EQ(*some_ns::FOLLY_SETTING(follytest, some_flag), "default");
       }
     });
   }
@@ -895,4 +912,89 @@ TEST(Settings, concurrentAccessCount) {
   EXPECT_EQ(
       some_ns::FOLLY_SETTING(follytest, some_flag).accessCount(),
       numThreads * numAccessesPerThread);
+}
+
+TEST(Settings, concurrentReadersAndWriters) {
+  some_ns::FOLLY_SETTING(follytest, some_flag).set("0");
+  const size_t numGetThreads = 16;
+  const size_t numGetsPerThread = 1'000;
+  const size_t numSetThreads = 4;
+  const size_t numSetsPerThread = 100'000;
+  const size_t numPublishThreads = 4;
+  const size_t numPublishesPerThread = 10'000;
+
+  std::vector<std::thread> getThreads(numGetThreads);
+  std::vector<std::thread> setThreads(numSetThreads);
+  std::vector<std::thread> publishThreads(numPublishThreads);
+
+  folly::test::Barrier barrier(
+      numGetThreads + numSetThreads + numPublishThreads + 1);
+
+  for (auto& getThread : getThreads) {
+    getThread = std::thread([&]() {
+      barrier.wait();
+      for (size_t j = 0; j < numGetsPerThread; ++j) {
+        auto& value = *some_ns::FOLLY_SETTING(follytest, some_flag);
+        auto sleepMs = folly::Random::rand32(10);
+        /* sleep override */
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
+        ASSERT_GE(folly::to<int>(value), 0);
+      }
+    });
+  }
+  for (auto& setThread : setThreads) {
+    setThread = std::thread([&]() {
+      barrier.wait();
+      for (size_t j = 0; j < numSetsPerThread; ++j) {
+        some_ns::FOLLY_SETTING(follytest, some_flag)
+            .set(folly::to<std::string>(j));
+      }
+    });
+  }
+  for (auto& publishThread : publishThreads) {
+    publishThread = std::thread([&]() {
+      barrier.wait();
+      for (size_t j = 0; j < numPublishesPerThread; ++j) {
+        folly::settings::Snapshot snapshot;
+        snapshot(some_ns::FOLLY_SETTING(follytest, some_flag))
+            .set(folly::to<std::string>(j));
+        snapshot.publish();
+      }
+    });
+  }
+
+  barrier.wait();
+  for (auto& getThread : getThreads) {
+    getThread.join();
+  }
+  for (auto& setThread : setThreads) {
+    setThread.join();
+  }
+  for (auto& publishThread : publishThreads) {
+    publishThread.join();
+  }
+}
+
+TEST(Settings, settingReferenceGuarantees) {
+  {
+    auto& value = *some_ns::FOLLY_SETTING(follytest, some_flag);
+    *some_ns::FOLLY_SETTING(follytest, some_flag); // Invalidates value
+    if constexpr (!folly::kIsLibrarySanitizeAddress) {
+      // Check this is safe (although risky) if we're not running with ASAN
+      // since the setting was not actually updated.
+      EXPECT_EQ(value, "default");
+    }
+  }
+  {
+    auto& value = *some_ns::FOLLY_SETTING(follytest, some_flag);
+    some_ns::FOLLY_SETTING(follytest, some_flag).set("abc");
+    EXPECT_EQ(value, "default");
+  }
+  {
+    auto& value = *some_ns::FOLLY_SETTING(follytest, some_flag);
+    folly::settings::Snapshot snapshot;
+    snapshot(some_ns::FOLLY_SETTING(follytest, some_flag)).set("def");
+    snapshot.publish();
+    EXPECT_EQ(value, "abc");
+  }
 }

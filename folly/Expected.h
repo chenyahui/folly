@@ -551,6 +551,8 @@ struct ExpectedStorage<Value, Error, StorageType::eUnion>
     if (isSelfAssign(&that)) {
       return;
     }
+    FOLLY_PUSH_WARNING
+    FOLLY_CLANG_DISABLE_WARNING("-Wcovered-switch-default")
     switch (that.which_) {
       case Which::eValue:
         this->assignValue(static_cast<Other&&>(that).value());
@@ -563,6 +565,7 @@ struct ExpectedStorage<Value, Error, StorageType::eUnion>
         this->clear();
         break;
     }
+    FOLLY_POP_WARNING
   }
 };
 

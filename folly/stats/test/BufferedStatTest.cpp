@@ -22,6 +22,8 @@
 using namespace folly;
 using namespace folly::detail;
 
+namespace {
+
 const size_t kDigestSize = 100;
 
 struct MockClock {
@@ -48,14 +50,27 @@ class SimpleDigest {
     return digest;
   }
 
+  static SimpleDigest merge(Range<const SimpleDigest**> r) {
+    SimpleDigest digest(100);
+    for (auto it = r.begin(); it != r.end(); ++it) {
+      const auto& values = (*it)->values_;
+      digest.values_.insert(digest.values_.end(), values.begin(), values.end());
+    }
+    return digest;
+  }
+
   static SimpleDigest merge(Range<const SimpleDigest*> r) {
     SimpleDigest digest(100);
     for (auto it = r.begin(); it != r.end(); ++it) {
-      for (auto value : it->values_) {
-        digest.values_.push_back(value);
-      }
+      const auto& values = it->values_;
+      digest.values_.insert(digest.values_.end(), values.begin(), values.end());
     }
     return digest;
+  }
+
+  static SimpleDigest merge(const SimpleDigest& d1, const SimpleDigest& d2) {
+    std::array<const SimpleDigest*, 2> ds = {&d1, &d2};
+    return merge(range(ds));
   }
 
   std::vector<double> getValues() const { return values_; }
@@ -67,6 +82,8 @@ class SimpleDigest {
 };
 
 MockClock::time_point MockClock::Now = MockClock::time_point{};
+
+} // namespace
 
 class BufferedDigestTest : public ::testing::Test {
  protected:
@@ -280,4 +297,85 @@ TEST_F(BufferedSlidingWindowTest, SlidePastWindow) {
   auto digests = bsw->get();
 
   EXPECT_EQ(0, digests.size());
+}
+
+TEST(BufferedMultiSlidingWindow, Equivalence) {
+  // Verify that BufferedMultiSlidingWindow returns exactly the same digests as
+  // BufferedDigest + BufferedSlidingWindow.
+
+  using BSW = BufferedSlidingWindow<SimpleDigest, MockClock>;
+  using BMSW = BufferedMultiSlidingWindow<SimpleDigest, MockClock>;
+
+  MockClock::Now = MockClock::time_point{};
+  const size_t bufferSize = 1000;
+  const size_t kNumValues = 500;
+  std::vector<BMSW::WindowDef> defs = {
+      {std::chrono::seconds{1}, 5},
+      {std::chrono::seconds{2}, 5},
+      {std::chrono::seconds{3}, 5},
+  };
+
+  BMSW bmsw{defs, bufferSize, kDigestSize};
+
+  // Reference buffered stats.
+  BufferedDigest<SimpleDigest, MockClock> allTime{
+      std::chrono::seconds{1}, bufferSize, kDigestSize};
+  std::vector<std::unique_ptr<BSW>> bsws;
+  bsws.reserve(defs.size());
+  for (const auto& def : defs) {
+    bsws.push_back(
+        std::make_unique<BSW>(def.second, def.first, bufferSize, kDigestSize));
+  }
+
+  const auto digestsValues = [](const auto& ds) {
+    std::vector<std::vector<double>> vals;
+    vals.reserve(ds.size());
+    for (const auto& d : ds) {
+      vals.push_back(d.getValues());
+    }
+    return vals;
+  };
+
+  const auto validate = [&] {
+    auto digests = bmsw.get();
+    EXPECT_EQ(digests.allTime.getValues(), allTime.get().getValues());
+    for (size_t w = 0; w < bsws.size(); ++w) {
+      EXPECT_EQ(
+          digestsValues(digests.windows[w]), digestsValues(bsws[w]->get()));
+    }
+  };
+
+  for (size_t i = 0; i < kNumValues; ++i) {
+    // Periodically check equivalence.
+    if (i % 10 == 0) {
+      validate();
+    }
+    bmsw.append(i);
+    allTime.append(i);
+    for (auto& bsw : bsws) {
+      bsw->append(i);
+    }
+    // Advance the clock by a prime so that buckets are not periodic.
+    MockClock::Now += std::chrono::milliseconds{137};
+    // Add a couple of gaps that leave some buckets empty.
+    if (i % 200 == 0) {
+      MockClock::Now += std::chrono::seconds{(i / 200 + 1) * 5};
+    }
+  }
+
+  // Digests should be equivalent after a flush as well.
+  bmsw.flush();
+  allTime.flush();
+  for (auto& bsw : bsws) {
+    bsw->flush();
+  }
+  validate();
+
+  // Verify that the test is not accidentally trivial and the windows slid at
+  // least once.
+  auto digests = bmsw.get();
+  EXPECT_EQ(digests.allTime.getValues().size(), kNumValues);
+  for (const auto& w : digests.windows) {
+    EXPECT_LT(SimpleDigest::merge(w).getValues().size(), kNumValues);
+  }
 }

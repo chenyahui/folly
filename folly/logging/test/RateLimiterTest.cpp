@@ -86,7 +86,7 @@ TEST(RateLimiter, concurrentThreads) {
     // This hopefully gives us the best chance of having all threads start
     // at close to the same time.
     {
-      std::unique_lock<std::mutex> lock{m};
+      std::unique_lock lock{m};
       cv.wait(lock, [&go] { return go; });
     }
 
@@ -106,7 +106,7 @@ TEST(RateLimiter, concurrentThreads) {
 
   // Set go to true and notify all the threads
   {
-    std::lock_guard<std::mutex> lg(m);
+    std::lock_guard lg(m);
     go = true;
   }
   cv.notify_all();

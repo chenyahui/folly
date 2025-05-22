@@ -47,7 +47,7 @@ struct WaitNodeBase {
   template <typename Clock, typename Duration>
   std::cv_status wait(std::chrono::time_point<Clock, Duration> deadline) {
     std::cv_status status = std::cv_status::no_timeout;
-    std::unique_lock<std::mutex> nodeLock(mutex_);
+    std::unique_lock nodeLock(mutex_);
     while (!signaled_ && status != std::cv_status::timeout) {
       if (deadline != std::chrono::time_point<Clock, Duration>::max()) {
         status = cond_.wait_until(nodeLock, deadline);
@@ -59,7 +59,7 @@ struct WaitNodeBase {
   }
 
   void wake() {
-    std::lock_guard<std::mutex> nodeLock(mutex_);
+    std::lock_guard nodeLock(mutex_);
     signaled_ = true;
     cond_.notify_one();
   }
@@ -265,7 +265,7 @@ ParkResult ParkingLot<Data>::park_until(
     // A: Must be seq_cst.  Matches B.
     bucket.count_.fetch_add(1, std::memory_order_seq_cst);
 
-    std::unique_lock<std::mutex> bucketLock(bucket.mutex_);
+    std::unique_lock bucketLock(bucket.mutex_);
 
     if (!std::forward<ToPark>(toPark)()) {
       bucketLock.unlock();
@@ -282,7 +282,7 @@ ParkResult ParkingLot<Data>::park_until(
 
   if (status == std::cv_status::timeout) {
     // it's not really a timeout until we unlink the unsignaled node
-    std::lock_guard<std::mutex> bucketLock(bucket.mutex_);
+    std::lock_guard bucketLock(bucket.mutex_);
     if (!node.signaled()) {
       bucket.erase(&node);
       return ParkResult::Timeout;
@@ -305,7 +305,7 @@ void ParkingLot<Data>::unpark(const Key bits, Func&& func) {
     return;
   }
 
-  std::lock_guard<std::mutex> bucketLock(bucket.mutex_);
+  std::lock_guard bucketLock(bucket.mutex_);
 
   for (auto iter = bucket.head_; iter != nullptr;) {
     auto node = static_cast<WaitNode*>(iter);

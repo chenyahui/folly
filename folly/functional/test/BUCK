@@ -1,8 +1,10 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "apply_tuple_test",
     srcs = ["ApplyTupleTest.cpp"],
     headers = [],
@@ -13,7 +15,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "invoke_test",
     srcs = ["InvokeTest.cpp"],
     headers = [],
@@ -24,7 +27,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "partial_test",
     srcs = ["PartialTest.cpp"],
     headers = [],
@@ -35,7 +39,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "protocol_test",
     srcs = ["protocol_test.cpp"],
     headers = [],
@@ -46,7 +51,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "traits_test",
     srcs = ["traits_test.cpp"],
     headers = [],

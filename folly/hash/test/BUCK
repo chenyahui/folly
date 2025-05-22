@@ -1,9 +1,11 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_benchmark.bzl", "cpp_benchmark")
 load("@fbcode_macros//build_defs:cpp_unittest.bzl", "cpp_unittest")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "checksum_test",
     srcs = ["ChecksumTest.cpp"],
     headers = [],
@@ -13,6 +15,7 @@ cpp_unittest(
         "//folly:random",
         "//folly/external/fast-crc32:avx512_crc32c_v8s3x4",
         "//folly/external/fast-crc32:neon_crc32c_v3s4x2e_v2",
+        "//folly/external/fast-crc32:neon_eor3_crc32_v9s3x2e_s3",
         "//folly/external/fast-crc32:neon_eor3_crc32c_v8s2x4_s3",
         "//folly/external/fast-crc32:sse_crc32c_v8s3x3",
         "//folly/hash:checksum",
@@ -26,7 +29,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "checksum_benchmark",
     srcs = ["ChecksumBenchmark.cpp"],
     headers = [],
@@ -40,7 +44,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "farm_hash_test",
     srcs = ["FarmHashTest.cpp"],
     headers = [],
@@ -50,7 +55,8 @@ cpp_unittest(
     ],
 )
 
-cpp_benchmark(
+fbcode_target(
+    _kind = cpp_benchmark,
     name = "hash_benchmark",
     srcs = ["HashBenchmark.cpp"],
     headers = [],
@@ -68,7 +74,8 @@ cpp_benchmark(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "hash_test",
     srcs = ["HashTest.cpp"],
     headers = [],
@@ -83,7 +90,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "spooky_hash_v1_test",
     srcs = ["SpookyHashV1Test.cpp"],
     headers = [],
@@ -97,7 +105,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "spooky_hash_v2_test",
     srcs = ["SpookyHashV2Test.cpp"],
     headers = [],
@@ -111,7 +120,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "traits_test",
     srcs = ["traits_test.cpp"],
     headers = [],
@@ -121,7 +131,8 @@ cpp_unittest(
     ],
 )
 
-cpp_unittest(
+fbcode_target(
+    _kind = cpp_unittest,
     name = "murmur_hash_test",
     srcs = ["MurmurHashTest.cpp"],
     headers = [],

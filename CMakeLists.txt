@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 3.0.2 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 # We use the GoogleTest module if it is available (only in CMake 3.9+)
 # It requires CMP0054 and CMP0057 to be enabled.
 if (POLICY CMP0054)
@@ -666,12 +666,17 @@ if (BUILD_TESTS OR BUILD_BENCHMARKS)
 
     DIRECTORY algorithm/simd/test/
       TEST algorithm_simd_contains_test SOURCES ContainsTest.cpp
+      TEST algorithm_simd_find_first_of_test SOURCES find_first_of_test.cpp
       TEST algorithm_simd_find_fixed_test SOURCES FindFixedTest.cpp
       TEST algorithm_simd_movemask_test SOURCES MovemaskTest.cpp
 
     DIRECTORY chrono/test/
       TEST chrono_conv_test WINDOWS_DISABLED
         SOURCES ConvTest.cpp
+
+    DIRECTORY codec/test/
+      TEST codec_hex_test SOURCES hex_test.cpp
+      TEST codec_uuid_test SOURCES UuidTest.cpp
 
     DIRECTORY compression/test/
       TEST compression_compression_test SLOW SOURCES CompressionTest.cpp
@@ -727,6 +732,8 @@ if (BUILD_TESTS OR BUILD_BENCHMARKS)
         SOURCES CoreCachedSharedPtrTest.cpp
       BENCHMARK concurrency_concurrent_hash_map_bench WINDOWS_DISABLED
         SOURCES ConcurrentHashMapBench.cpp
+      TEST concurrency_concurrent_hash_map_stress_test SLOW WINDOWS_DISABLED
+        SOURCES ConcurrentHashMapStressTest.cpp
       TEST concurrency_concurrent_hash_map_test WINDOWS_DISABLED
         SOURCES ConcurrentHashMapTest.cpp
       TEST concurrency_dynamic_bounded_queue_test WINDOWS_DISABLED
@@ -994,6 +1001,8 @@ if (BUILD_TESTS OR BUILD_BENCHMARKS)
       TEST memory_arena_test WINDOWS_DISABLED SOURCES ArenaTest.cpp
       TEST memory_reentrant_allocator_test WINDOWS_DISABLED
         SOURCES ReentrantAllocatorTest.cpp
+      TEST memory_shared_from_this_ptr_test
+        SOURCES shared_from_this_ptr_test.cpp
       TEST memory_thread_cached_arena_test WINDOWS_DISABLED
         SOURCES ThreadCachedArenaTest.cpp
       TEST memory_mallctl_helper_test SOURCES MallctlHelperTest.cpp

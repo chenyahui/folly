@@ -1,8 +1,548 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//xplat/folly:defs.bzl", "folly_xplat_cxx_library")
+load("@fbsource//xplat/pfh/triage_InfrastructureSupermoduleOptou:DEFS.bzl", "triage_InfrastructureSupermoduleOptou")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "accumulate",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Accumulate.h",
+        "Accumulate-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:accumulate",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "async_generator",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["AsyncGenerator.h"],
+    exported_deps = [
+        "//xplat/folly/coro:async_generator",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "async_pipe",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["AsyncPipe.h"],
+    exported_deps = [
+        "//xplat/folly/coro:async_pipe",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "async_scope",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["AsyncScope.h"],
+    exported_deps = [
+        "//xplat/folly/coro:async_scope",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "async_stack",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "AsyncStack.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:async_stack",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "baton",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Baton.h"],
+    exported_deps = [
+        "//xplat/folly/coro:baton",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "blocking_wait",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["BlockingWait.h"],
+    exported_deps = [
+        "//xplat/folly/coro:blocking_wait",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "collect",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Collect.h",
+        "Collect-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:collect",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "concat",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Concat.h",
+        "Concat-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:concat",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "coroutine",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Coroutine.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:coroutine",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "current_executor",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["CurrentExecutor.h"],
+    exported_deps = [
+        "//xplat/folly/coro:current_executor",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detach_on_cancel",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["DetachOnCancel.h"],
+    exported_deps = [
+        "//xplat/folly/coro:detach_on_cancel",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_barrier",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/Barrier.h"],
+    exported_deps = [
+        "//xplat/folly/coro:detail_barrier",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_barrier_task",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/BarrierTask.h"],
+    exported_deps = [
+        "//xplat/folly/coro:detail_barrier_task",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_current_async_frame",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/CurrentAsyncFrame.h"],
+    exported_deps = [
+        "//xplat/folly/coro:detail_current_async_frame",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_helpers",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/Helpers.h"],
+    exported_deps = [
+        "//xplat/folly/coro:detail_helpers",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_malloc",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/Malloc.h"],
+    exported_deps = [
+        "//xplat/folly/coro:detail_malloc",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_manual_lifetime",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/ManualLifetime.h"],
+    exported_deps = [
+        "//xplat/folly/coro:detail_manual_lifetime",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_traits",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/Traits.h"],
+    exported_deps = [
+        "//xplat/folly/coro:detail_traits",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "filter",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Filter.h",
+        "Filter-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:filter",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "future_util",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["FutureUtil.h"],
+    exported_deps = [
+        "//xplat/folly/coro:future_util",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "generator",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Generator.h"],
+    exported_deps = [
+        "//xplat/folly/coro:generator",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "gtest_helpers",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["GtestHelpers.h"],
+    exported_deps = [
+        "//xplat/folly/coro:gtest_helpers",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "gmock_helpers",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["GmockHelpers.h"],
+    exported_deps = [
+        "//xplat/folly/coro:gmock_helpers",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "inline_task",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/InlineTask.h"],
+    exported_deps = [
+        "//xplat/folly/coro:inline_task",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "invoke",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Invoke.h"],
+    exported_deps = [
+        "//xplat/folly/coro:invoke",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "merge",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Merge.h",
+        "Merge-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:merge",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "mutex",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Mutex.h"],
+    exported_deps = [
+        "//xplat/folly/coro:mutex",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "promise",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Promise.h"],
+    exported_deps = [
+        "//xplat/folly/coro:promise",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "shared_promise",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["SharedPromise.h"],
+    exported_deps = [
+        "//xplat/folly/coro:shared_promise",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "result",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Result.h"],
+    exported_deps = [
+        "//xplat/folly/coro:result",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "retry",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Retry.h"],
+    exported_deps = [
+        "//xplat/folly/coro:retry",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "scope_exit",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["ScopeExit.h"],
+    exported_deps = [
+        "//xplat/folly/coro:scope_exit",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "shared_lock",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["SharedLock.h"],
+    exported_deps = [
+        "//xplat/folly/coro:shared_lock",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "shared_mutex",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["SharedMutex.h"],
+    exported_deps = [
+        "//xplat/folly/coro:shared_mutex",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "sleep",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Sleep.h",
+        "Sleep-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:sleep",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "small_unbounded_queue",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["SmallUnboundedQueue.h"],
+    exported_deps = [
+        "//xplat/folly/coro:small_unbounded_queue",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "task",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Task.h"],
+    exported_deps = [
+        "//xplat/folly/coro:task",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "timed_wait",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["TimedWait.h"],
+    exported_deps = [
+        "//xplat/folly/coro:timed_wait",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "timeout",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Timeout.h",
+        "Timeout-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:timeout",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "traits",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Traits.h"],
+    exported_deps = [
+        "//xplat/folly/coro:traits",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "transform",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Transform.h",
+        "Transform-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:transform",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "bounded_queue",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["BoundedQueue.h"],
+    exported_deps = [
+        "//xplat/folly/coro:bounded_queue",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "unbounded_queue",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["UnboundedQueue.h"],
+    exported_deps = [
+        "//xplat/folly/coro:unbounded_queue",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "via_if_async",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["ViaIfAsync.h"],
+    exported_deps = [
+        "//xplat/folly/coro:via_if_async",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "with_async_stack",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["WithAsyncStack.h"],
+    exported_deps = [
+        "//xplat/folly/coro:with_async_stack",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "with_cancellation",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["WithCancellation.h"],
+    exported_deps = [
+        "//xplat/folly/coro:with_cancellation",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "cleanup",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Cleanup.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:cleanup",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "auto_cleanup_fwd",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "AutoCleanup-fwd.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:auto_cleanup_fwd",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "auto_cleanup",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "AutoCleanup.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/coro:auto_cleanup",
+    ],
+)
+
+# !!!! fbcode/folly/experimental/coro/TARGETS was merged into this file, see https://fburl.com/workplace/xl8l9yuo for more info !!!!
+
+fbcode_target(
+    _kind = cpp_library,
     name = "async_generator",
     headers = [
         "AsyncGenerator.h",
@@ -12,7 +552,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "async_pipe",
     headers = [
         "AsyncPipe.h",
@@ -22,7 +563,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "async_scope",
     headers = [
         "AsyncScope.h",
@@ -32,7 +574,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "async_stack",
     headers = [
         "AsyncStack.h",
@@ -42,7 +585,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "baton",
     headers = [
         "Baton.h",
@@ -52,7 +596,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "blocking_wait",
     headers = [
         "BlockingWait.h",
@@ -62,7 +607,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "collect",
     headers = [
         "Collect.h",
@@ -73,7 +619,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "concat",
     headers = [
         "Concat.h",
@@ -84,7 +631,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "coroutine",
     headers = [
         "Coroutine.h",
@@ -94,7 +642,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "current_executor",
     headers = [
         "CurrentExecutor.h",
@@ -104,7 +653,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "detach_on_cancel",
     headers = [
         "DetachOnCancel.h",
@@ -114,7 +664,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_barrier",
     headers = [
         "detail/Barrier.h",
@@ -124,7 +675,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_barrier_task",
     headers = [
         "detail/BarrierTask.h",
@@ -134,7 +686,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_current_async_frame",
     headers = [
         "detail/CurrentAsyncFrame.h",
@@ -144,7 +697,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_helpers",
     headers = [
         "detail/Helpers.h",
@@ -154,7 +708,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_malloc",
     headers = [
         "detail/Malloc.h",
@@ -164,7 +719,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_manual_lifetime",
     headers = [
         "detail/ManualLifetime.h",
@@ -174,7 +730,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_traits",
     headers = [
         "detail/Traits.h",
@@ -184,7 +741,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "filter",
     headers = [
         "Filter.h",
@@ -195,7 +753,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "future_util",
     headers = [
         "FutureUtil.h",
@@ -205,7 +764,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "generator",
     headers = [
         "Generator.h",
@@ -215,7 +775,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "gmock_helpers",
     headers = [
         "GmockHelpers.h",
@@ -225,7 +786,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "gtest_helpers",
     headers = [
         "GtestHelpers.h",
@@ -235,7 +797,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "inline_task",
     headers = [
         "detail/InlineTask.h",
@@ -245,7 +808,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "invoke",
     headers = [
         "Invoke.h",
@@ -255,7 +819,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "merge",
     headers = [
         "Merge.h",
@@ -266,7 +831,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "mutex",
     headers = [
         "Mutex.h",
@@ -276,7 +842,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "promise",
     headers = [
         "Promise.h",
@@ -286,7 +853,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "result",
     headers = [
         "Result.h",
@@ -296,7 +864,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "retry",
     headers = [
         "Retry.h",
@@ -306,7 +875,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "rust_adaptors",
     headers = [
         "RustAdaptors.h",
@@ -316,7 +886,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "scope_exit",
     headers = [
         "ScopeExit.h",
@@ -326,7 +897,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "shared_lock",
     headers = [
         "SharedLock.h",
@@ -336,7 +908,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "shared_mutex",
     headers = [
         "SharedMutex.h",
@@ -346,7 +919,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "sleep",
     headers = [
         "Sleep.h",
@@ -357,7 +931,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "small_unbounded_queue",
     headers = [
         "SmallUnboundedQueue.h",
@@ -367,7 +942,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "task",
     headers = [
         "Task.h",
@@ -377,7 +953,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "timed_wait",
     headers = [
         "TimedWait.h",
@@ -387,7 +964,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "timeout",
     headers = [
         "Timeout.h",
@@ -398,7 +976,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "traits",
     headers = [
         "Traits.h",
@@ -408,7 +987,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "transform",
     headers = [
         "Transform.h",
@@ -419,7 +999,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "unbounded_queue",
     headers = [
         "UnboundedQueue.h",
@@ -429,7 +1010,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "via_if_async",
     headers = [
         "ViaIfAsync.h",
@@ -439,7 +1021,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "with_async_stack",
     headers = [
         "WithAsyncStack.h",
@@ -449,7 +1032,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "with_cancellation",
     headers = [
         "WithCancellation.h",
@@ -459,7 +1043,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "bounded_queue",
     headers = [
         "BoundedQueue.h",
@@ -469,7 +1054,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "shared_promise",
     headers = [
         "SharedPromise.h",
@@ -479,7 +1065,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "cleanup",
     headers = [
         "Cleanup.h",
@@ -489,7 +1076,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "auto_cleanup_fwd",
     headers = [
         "AutoCleanup-fwd.h",
@@ -499,7 +1087,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "auto_cleanup",
     headers = [
         "AutoCleanup.h",

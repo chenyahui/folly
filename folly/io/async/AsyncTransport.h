@@ -44,6 +44,7 @@ class AsyncReader {
     enum class ReadMode : uint8_t {
       ReadBuffer = 0,
       ReadVec = 1,
+      ReadZC = 2,
     };
 
     virtual ~ReadCallback() = default;
@@ -843,7 +844,7 @@ class AsyncTransport
         AsyncTransport::UniquePtr ret =
             const_cast<AsyncTransport*>(last)->tryExchangeWrappedTransport(p);
         ret->setReadCB(nullptr);
-        DCHECK_NOTNULL(dynamic_cast<T*>(ret.get()));
+        DCHECK_NE(dynamic_cast<T*>(ret.get()), nullptr);
         return typename T::UniquePtr(static_cast<T*>(ret.release()));
       }
       last = current;

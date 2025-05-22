@@ -98,12 +98,14 @@
 #endif
 
 #include <signal.h>
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
 #include <chrono>
 #include <exception>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include <boost/container/flat_map.hpp>
@@ -117,11 +119,40 @@
 #include <folly/Optional.h>
 #include <folly/Portability.h>
 #include <folly/Range.h>
+#include <folly/container/span.h>
 #include <folly/gen/String.h>
 #include <folly/io/IOBufQueue.h>
 #include <folly/portability/SysResource.h>
 
 namespace folly {
+
+namespace detail {
+
+/// SubprocessFdActionsList
+///
+/// A sorted vector-map with a binary search. Declared in the header so that the
+/// binary search can be unit-tested.
+///
+/// Not using a library container type since this binary search is done in the
+/// child process after a vfork(), including in sanitized builds. Relevant
+/// member functions are explicitly marked non-sanitized (under clang).
+class SubprocessFdActionsList {
+ private:
+  using value_type = std::pair<int, int>;
+
+  value_type const* begin_;
+  value_type const* end_;
+
+ public:
+  explicit SubprocessFdActionsList(span<value_type const> rep) noexcept;
+
+  value_type const* begin() const noexcept;
+  value_type const* end() const noexcept;
+
+  int const* find(int fd) const noexcept;
+};
+
+} // namespace detail
 
 /**
  * Class to wrap a process return code.
@@ -269,23 +300,7 @@ class Subprocess {
   static const int PIPE_IN = -3;
   static const int PIPE_OUT = -4;
   static const int DEV_NULL = -5;
-
-  /**
-   * See Subprocess::Options::dangerousPostForkPreExecCallback() for usage.
-   * Every derived class should include the following warning:
-   *
-   * DANGER: This class runs after fork in a child processes. Be fast, the
-   * parent thread is waiting, but remember that other parent threads are
-   * running and may mutate your state.  Avoid mutating any data belonging to
-   * the parent.  Avoid interacting with non-POD data that originated in the
-   * parent.  Avoid any libraries that may internally reference non-POD data.
-   * Especially beware parent mutexes -- for example, glog's LOG() uses one.
-   */
-  struct DangerousPostForkPreExecCallback {
-    virtual ~DangerousPostForkPreExecCallback() {}
-    // This must return 0 on success, or an `errno` error code.
-    virtual int operator()() = 0;
-  };
+  static const int NO_CLOEXEC = -6;
 
   /**
    * Class representing various options: file descriptor behavior, and
@@ -299,6 +314,15 @@ class Subprocess {
     friend class Subprocess;
 
    public:
+    // digits10 is the maximum number of decimal digits such that any number
+    // up to this many decimal digits can always be represented in the given
+    // integer type
+    // but we need to have storage for the decimal representation of any
+    // integer, so +1, and we need to have storage for the terminal null, so
+    // again +1.
+    static inline constexpr size_t kPidBufferMinSize =
+        std::numeric_limits<pid_t>::digits10 + 2;
+
     Options() {} // E.g. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58328
 
     /**
@@ -401,17 +425,15 @@ class Subprocess {
      * Detach the spawned process, to allow destroying the Subprocess object
      * without waiting for the child process to finish.
      *
-     * This causes the code to fork twice before executing the command.
-     * The intermediate child process will exit immediately, causing the process
-     * running the executable to be reparented to init (pid 1).
+     * This causes the code to vfork twice before executing the command. The
+     * intermediate child process will exit immediately after execve, causing
+     * the process running the executable to be reparented to init (pid 1).
      *
      * Subprocess objects created with detach() enabled will already be in an
      * "EXITED" state when the constructor returns.  The caller should not call
      * wait() or poll() on the Subprocess, and pid() will return -1.
      */
-    [[deprecated(
-        "detach() forks the current process, which is considered dangerous")]] Options&
-    detach() {
+    Options& detach() {
       detach_ = true;
       return *this;
     }
@@ -465,74 +487,63 @@ class Subprocess {
       return *this;
     }
 
-    /**
-     * *** READ THIS WHOLE DOCBLOCK BEFORE USING ***
-     *
-     * Run this callback in the child after the fork, just before the
-     * exec(), and after the child's state has been completely set up:
-     *  - signal handlers have been reset to default handling and unblocked
-     *  - the working directory was set
-     *  - closed any file descriptors specified via Options()
-     *  - set child process flags (see code)
-     *
-     * This is EXTREMELY DANGEROUS. For example, this innocuous-looking code
-     * can cause a fraction of your Subprocess launches to hang forever:
-     *
-     *   LOG(INFO) << "Hello from the child";
-     *
-     * The reason is that glog has an internal mutex. If your fork() happens
-     * when the parent has the mutex locked, the child will wait forever.
-     *
-     * == GUIDELINES ==
-     *
-     * - Be quick -- the parent thread is blocked until you exit.
-     * - Remember that other parent threads are running, and may mutate your
-     *   state.
-     * - Avoid mutating any data belonging to the parent.
-     * - Avoid interacting with non-POD data that came from the parent.
-     * - Avoid any libraries that may internally reference non-POD state.
-     * - Especially beware parent mutexes, e.g. LOG() uses a global mutex.
-     * - Avoid invoking the parent's destructors (you can accidentally
-     *   delete files, terminate network connections, etc).
-     * - Read http://ewontfix.com/7/
-     */
-    Options& dangerousPostForkPreExecCallback(
-        DangerousPostForkPreExecCallback* cob) {
-      dangerousPostForkPreExecCallback_ = cob;
+#if defined(__linux__)
+    Options& setCpuSet(
+        const cpu_set_t& cpuSet, std::shared_ptr<int> errout = nullptr) {
+      cpuSet_ = AttrWithMeta<cpu_set_t>{cpuSet, std::move(errout)};
       return *this;
     }
 
-#if defined(__linux__)
-    /**
-     * This is an experimental feature, it is best you don't use it at this
-     * point of time.
-     * Although folly would support cloning with custom flags in some form, this
-     * API might change in the near future. So use the following assuming it is
-     * experimental. (Apr 11, 2017)
-     *
-     * This unlocks Subprocess to support clone flags, many of them need
-     * CAP_SYS_ADMIN permissions. It might also require you to go through the
-     * implementation to understand what happens before, between and after the
-     * fork-and-exec.
-     *
-     * `man 2 clone` would be a starting point for knowing about the available
-     * flags.
+    /*
+     * setLinuxCGroup*
+     * Takes a fd or a path to the cgroup dir. Only one may be provided.
+     * Note that the cgroup filesystem may be mounted at any arbitrary point in
+     * the filesystem hierarchy, and that different distributions may have their
+     * own standard points. So just taking a cgroup name would be non-portable.
      */
-    using clone_flags_t = uint64_t;
-    Options& useCloneWithFlags(clone_flags_t cloneFlags) noexcept {
-      cloneFlags_ = cloneFlags;
-      return *this;
-    }
+    Options& setLinuxCGroupFd(
+        int cgroupFd, std::shared_ptr<int> errout = nullptr);
+    Options& setLinuxCGroupPath(
+        const std::string& cgroupPath, std::shared_ptr<int> errout = nullptr);
 #endif
 
-#if defined(__linux__)
-    Options& setCpuSet(const cpu_set_t& cpuSet) {
-      cpuSet_ = cpuSet;
+    Options& setUid(uid_t uid, std::shared_ptr<int> errout = nullptr) {
+      uid_ = AttrWithMeta<uid_t>{uid, std::move(errout)};
       return *this;
     }
-#endif
+    Options& setGid(gid_t gid, std::shared_ptr<int> errout = nullptr) {
+      gid_ = AttrWithMeta<gid_t>{gid, std::move(errout)};
+      return *this;
+    }
+    Options& setEUid(uid_t uid, std::shared_ptr<int> errout = nullptr) {
+      euid_ = AttrWithMeta<uid_t>{uid, std::move(errout)};
+      return *this;
+    }
+    Options& setEGid(gid_t gid, std::shared_ptr<int> errout = nullptr) {
+      egid_ = AttrWithMeta<gid_t>{gid, std::move(errout)};
+      return *this;
+    }
+
+    Options& setSignalMask(sigset_t sigmask) {
+      sigmask_ = sigmask;
+      return *this;
+    }
+
+    Options& addPrintPidToBuffer(span<char> buf);
+
+    Options& addRLimit(
+        int resource, rlimit limit, std::shared_ptr<int> errout = nullptr);
 
    private:
+    template <typename T>
+    struct AttrWithMeta {
+      T value{};
+
+      /// nullptr if required, ptr if optional to report failure
+      std::shared_ptr<int> erroutLifetime_{}; // do not access in child
+      int* errout{erroutLifetime_.get()};
+    };
+
     typedef boost::container::flat_map<int, int> FdMap;
     FdMap fdActions_;
     bool closeOtherFds_{false};
@@ -545,19 +556,19 @@ class Subprocess {
     // terminateOrKill() to kill the child process.
     TimeoutDuration::rep destroyBehavior_{DestroyBehaviorFatal};
     std::string childDir_; // "" keeps the parent's working directory
+    AttrWithMeta<int> linuxCGroupFd_{-1, nullptr}; // -1 means no cgroup
+    AttrWithMeta<std::string> linuxCGroupPath_{}; // empty means no cgroup
 #if defined(__linux__)
     int parentDeathSignal_{0};
+    Optional<AttrWithMeta<cpu_set_t>> cpuSet_;
 #endif
-    DangerousPostForkPreExecCallback* dangerousPostForkPreExecCallback_{
-        nullptr};
-#if defined(__linux__)
-    // none means `vfork()` instead of a custom `clone()`
-    // Optional<> is used because value of '0' means do clone without any flags.
-    Optional<clone_flags_t> cloneFlags_;
-#endif
-#if defined(__linux__)
-    Optional<cpu_set_t> cpuSet_;
-#endif
+    Optional<AttrWithMeta<uid_t>> uid_;
+    Optional<AttrWithMeta<gid_t>> gid_;
+    Optional<AttrWithMeta<uid_t>> euid_;
+    Optional<AttrWithMeta<gid_t>> egid_;
+    Optional<sigset_t> sigmask_;
+    std::unordered_set<char*> setPrintPidToBuffer_;
+    std::unordered_map<int, AttrWithMeta<rlimit>> rlimits_;
   };
 
   // Non-copyable, but movable
@@ -658,6 +669,14 @@ class Subprocess {
    * violations of contract, like an out-of-band waitpid(p.pid(), 0, 0).
    */
   ProcessReturnCode wait();
+
+  /**
+   * Wait for the process to terminate and return its status and rusage.  Like
+   * poll(), the only exception this can throw is std::logic_error if you call
+   * this on a Subprocess whose status is not RUNNING.  Aborts on egregious
+   * violations of contract, like an out-of-band wait4(p.pid(), 0, 0, nullptr).
+   */
+  ProcessReturnCode waitAndGetRusage(struct rusage* ru);
 
   /**
    * Wait for the process to terminate, throw if unsuccessful.
@@ -979,6 +998,10 @@ class Subprocess {
   std::vector<ChildPipe> takeOwnershipOfPipes();
 
  private:
+  struct LibcReal;
+  struct SpawnRawArgs;
+  struct ChildErrorInfo;
+
   // spawn() sets up a pipe to read errors from the child,
   // then calls spawnInternal() to do the bulk of the work.  Once
   // spawnInternal() returns it reads the error pipe to see if the child
@@ -993,27 +1016,28 @@ class Subprocess {
       const char* executable,
       Options& options,
       const std::vector<std::string>* env,
-      int errFd);
+      ChildErrorInfo* err);
+
+  static pid_t spawnInternalDoFork(SpawnRawArgs const& args);
+  [[noreturn]] static void childError(
+      SpawnRawArgs const& args, int errCode, int errnoValue);
 
   // Actions to run in child.
   // Note that this runs after vfork(), so tread lightly.
   // Returns 0 on success, or an errno value on failure.
-  int prepareChild(
-      const Options& options,
-      const sigset_t* sigmask,
-      const char* childDir) const;
-  int runChild(
-      const char* executable, char** argv, char** env, const Options& options)
-      const;
+  static int prepareChild(SpawnRawArgs const& args);
+  static int prepareChildDoOptionalError(int* errout);
+  static int prepareChildDoLinuxCGroup(SpawnRawArgs const& args);
+  static int runChild(SpawnRawArgs const& args);
 
   // Closes fds inherited from parent in child process
-  static void closeInheritedFds(const Options::FdMap& fdActions);
+  static void closeInheritedFds(const SpawnRawArgs& args);
 
   /**
    * Read from the error pipe, and throw SubprocessSpawnError if the child
    * failed before calling exec().
    */
-  void readChildErrorPipe(int pfd, const char* executable);
+  void readChildErrorNum(ChildErrorInfo err, const char* executable);
 
   // Returns an index into pipes_. Throws std::invalid_argument if not found.
   size_t findByChildFd(const int childFd) const;

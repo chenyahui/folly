@@ -1,8 +1,14 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target", "non_fbcode_target")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
+load("@fbsource//xplat/folly:defs.bzl", "folly_xplat_cxx_library")
+load("@fbsource//xplat/pfh/triage_InfrastructureSupermoduleOptou:DEFS.bzl", "triage_InfrastructureSupermoduleOptou")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_library(
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "accumulate",
     headers = [
         "Accumulate.h",
@@ -15,7 +21,25 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "accumulate",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Accumulate.h",
+        "Accumulate-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:async_generator",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:task",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "async_generator",
     srcs = [],
     headers = ["AsyncGenerator.h"],
@@ -42,7 +66,37 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "async_generator",
+    srcs = [],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["AsyncGenerator.h"],
+    exported_deps = [
+        "//third-party/glog:glog",
+        "//xplat/folly:cancellation_token",
+        "//xplat/folly:exception_wrapper",
+        "//xplat/folly:traits",
+        "//xplat/folly:try",
+        "//xplat/folly/experimental/coro:auto_cleanup_fwd",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:current_executor",
+        "//xplat/folly/experimental/coro:detail_malloc",
+        "//xplat/folly/experimental/coro:detail_manual_lifetime",
+        "//xplat/folly/experimental/coro:invoke",
+        "//xplat/folly/experimental/coro:result",
+        "//xplat/folly/experimental/coro:scope_exit",
+        "//xplat/folly/experimental/coro:via_if_async",
+        "//xplat/folly/experimental/coro:with_async_stack",
+        "//xplat/folly/experimental/coro:with_cancellation",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "async_pipe",
     srcs = [],
     headers = ["AsyncPipe.h"],
@@ -57,7 +111,27 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "async_pipe",
+    srcs = [],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["AsyncPipe.h"],
+    exported_deps = [
+        "//xplat/folly:try",
+        "//xplat/folly/experimental/coro:async_generator",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:invoke",
+        "//xplat/folly/experimental/coro:small_unbounded_queue",
+        "//xplat/folly/experimental/coro:via_if_async",
+        "//xplat/folly/fibers:semaphore",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "async_scope",
     srcs = [],
     headers = ["AsyncScope.h"],
@@ -77,7 +151,28 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "async_scope",
+    srcs = [],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["AsyncScope.h"],
+    exported_deps = [
+        "//third-party/glog:glog",
+        "//xplat/folly:futures_core",
+        "//xplat/folly:portability_source_location",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:current_executor",
+        "//xplat/folly/experimental/coro:detail_barrier",
+        "//xplat/folly/experimental/coro:detail_barrier_task",
+        "//xplat/folly/experimental/coro:task",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "async_stack",
     headers = ["AsyncStack.h"],
     exported_deps = [
@@ -88,7 +183,127 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "async_stack",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "AsyncStack.h",
+    ],
+    deps = [
+        "//xplat/folly:executor",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:with_async_stack",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "auto_cleanup",
+    headers = [
+        "AutoCleanup.h",
+    ],
+    exported_deps = [
+        "//folly/coro:auto_cleanup_fwd",
+        "//folly/coro:collect",
+        "//folly/coro:task",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "auto_cleanup",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "AutoCleanup.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:auto_cleanup_fwd",
+        "//xplat/folly/experimental/coro:collect",
+        "//xplat/folly/experimental/coro:task",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "auto_cleanup_fwd",
+    headers = [
+        "AutoCleanup-fwd.h",
+    ],
+    exported_deps = [
+        "//folly/coro:cleanup",
+        "//folly/coro:coroutine",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "auto_cleanup_fwd",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "AutoCleanup-fwd.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:cleanup",
+        "//xplat/folly/experimental/coro:coroutine",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "await_immediately",
+    headers = ["AwaitImmediately.h"],
+    exported_deps = [
+        "//folly:portability",
+        "//folly:utility",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "await_immediately",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["AwaitImmediately.h"],
+    exported_deps = [
+        "//xplat/folly:portability",
+        "//xplat/folly:utility",
+    ],
+)
+
+### this line is a hint for source control merge
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "await_result",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["AwaitResult.h"],
+    exported_deps = [
+        ":via_if_async",
+        "//xplat/folly/result:try",
+    ],
+)
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "await_result",
+    headers = ["AwaitResult.h"],
+    exported_deps = [
+        ":via_if_async",
+        "//folly/result:try",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "baton",
     srcs = ["Baton.cpp"],
     headers = ["Baton.h"],
@@ -101,10 +316,28 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "baton",
+    srcs = ["Baton.cpp"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Baton.h"],
+    deps = [
+        "//xplat/folly:portability",
+        "//xplat/folly:synchronization_atomic_util",
+        "//xplat/folly:try",
+        "//xplat/folly/experimental/coro:coroutine",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "blocking_wait",
     headers = ["BlockingWait.h"],
     exported_deps = [
+        ":await_immediately",
         "//folly:try",
         "//folly/coro:coroutine",
         "//folly/coro:detail_malloc",
@@ -120,7 +353,57 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "blocking_wait",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["BlockingWait.h"],
+    exported_deps = [
+        ":await_immediately",
+        "//xplat/folly:synchronization_baton",
+        "//xplat/folly:try",
+        "//xplat/folly/executors:manual_executor",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:detail_malloc",
+        "//xplat/folly/experimental/coro:detail_traits",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/experimental/coro:traits",
+        "//xplat/folly/experimental/coro:via_if_async",
+        "//xplat/folly/experimental/coro:with_async_stack",
+        "//xplat/folly/fibers:core",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "cleanup",
+    headers = [
+        "Cleanup.h",
+    ],
+    exported_deps = [
+        "//folly/functional:invoke",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "cleanup",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Cleanup.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:functional_invoke",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "collect",
     headers = [
         "Collect.h",
@@ -148,7 +431,40 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "collect",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Collect.h",
+        "Collect-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:cancellation_token",
+        "//xplat/folly:exception_wrapper",
+        "//xplat/folly:try",
+        "//xplat/folly:unit",
+        "//xplat/folly/container:access",
+        "//xplat/folly/container:iterator",
+        "//xplat/folly/experimental/coro:async_generator",
+        "//xplat/folly/experimental/coro:async_pipe",
+        "//xplat/folly/experimental/coro:async_scope",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:detail_barrier",
+        "//xplat/folly/experimental/coro:detail_barrier_task",
+        "//xplat/folly/experimental/coro:detail_current_async_frame",
+        "//xplat/folly/experimental/coro:detail_helpers",
+        "//xplat/folly/experimental/coro:detail_traits",
+        "//xplat/folly/experimental/coro:mutex",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/experimental/coro:via_if_async",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "concat",
     headers = [
         "Concat.h",
@@ -160,7 +476,24 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "concat",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Concat.h",
+        "Concat-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:async_generator",
+        "//xplat/folly/experimental/coro:coroutine",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "coroutine",
     headers = ["Coroutine.h"],
     exported_deps = [
@@ -169,7 +502,23 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "coroutine",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Coroutine.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:portability",
+        "//xplat/folly:utility",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "current_executor",
     headers = ["CurrentExecutor.h"],
     exported_deps = [
@@ -181,7 +530,24 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "current_executor",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["CurrentExecutor.h"],
+    exported_deps = [
+        "//xplat/folly:executor",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:via_if_async",
+        "//xplat/folly/experimental/coro:with_async_stack",
+        "//xplat/folly/io/async:request_context",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "detach_on_cancel",
     headers = ["DetachOnCancel.h"],
     exported_deps = [
@@ -194,7 +560,25 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detach_on_cancel",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["DetachOnCancel.h"],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:baton",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:detail_helpers",
+        "//xplat/folly/experimental/coro:invoke",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/experimental/coro:traits",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_barrier",
     headers = ["detail/Barrier.h"],
     exported_deps = [
@@ -205,7 +589,23 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_barrier",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/Barrier.h"],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:traits",
+        "//xplat/folly/experimental/coro:with_async_stack",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_barrier_task",
     headers = ["detail/BarrierTask.h"],
     exported_deps = [
@@ -216,7 +616,23 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_barrier_task",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/BarrierTask.h"],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:detail_barrier",
+        "//xplat/folly/experimental/coro:detail_malloc",
+        "//xplat/folly/experimental/coro:with_async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_current_async_frame",
     headers = ["detail/CurrentAsyncFrame.h"],
     exported_deps = [
@@ -227,7 +643,23 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_current_async_frame",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/CurrentAsyncFrame.h"],
+    exported_deps = [
+        "//xplat/folly:executor",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:with_async_stack",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_helpers",
     headers = ["detail/Helpers.h"],
     exported_deps = [
@@ -239,7 +671,24 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_helpers",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/Helpers.h"],
+    exported_deps = [
+        "//xplat/folly:executor",
+        "//xplat/folly:singleton_thread_local",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/io/async:request_context",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_malloc",
     srcs = ["detail/Malloc.cpp"],
     headers = ["detail/Malloc.h"],
@@ -252,7 +701,23 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_malloc",
+    srcs = ["detail/Malloc.cpp"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/Malloc.h"],
+    deps = [
+        "//xplat/folly/lang:hint",
+        "//xplat/folly/lang:new",
+    ],
+    exported_deps = ["//xplat/folly:c_portability"],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_manual_lifetime",
     headers = ["detail/ManualLifetime.h"],
     exported_deps = [
@@ -260,7 +725,18 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_manual_lifetime",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/ManualLifetime.h"],
+    exported_deps = ["//xplat/folly:scope_guard"],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "detail_traits",
     headers = ["detail/Traits.h"],
     exported_deps = [
@@ -268,7 +744,18 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "detail_traits",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/Traits.h"],
+    exported_deps = ["//xplat/folly:traits"],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "filter",
     headers = [
         "Filter.h",
@@ -280,7 +767,24 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "filter",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Filter.h",
+        "Filter-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:async_generator",
+        "//xplat/folly/experimental/coro:coroutine",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "future_util",
     headers = ["FutureUtil.h"],
     exported_deps = [
@@ -295,7 +799,27 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "future_util",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["FutureUtil.h"],
+    exported_deps = [
+        "//xplat/folly:cancellation_token",
+        "//xplat/folly:futures_core",
+        "//xplat/folly/experimental/coro:baton",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:current_executor",
+        "//xplat/folly/experimental/coro:invoke",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/experimental/coro:traits",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "generator",
     headers = ["Generator.h"],
     exported_deps = [
@@ -305,7 +829,22 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "generator",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Generator.h"],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:invoke",
+        "//xplat/folly/lang:exception",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "gmock_helpers",
     headers = ["GmockHelpers.h"],
     exported_deps = [
@@ -317,7 +856,24 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "gmock_helpers",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["GmockHelpers.h"],
+    exported_deps = [
+        "//xplat/folly:portability_gmock",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:gtest_helpers",
+        "//xplat/folly/experimental/coro:result",
+        "//xplat/folly/experimental/coro:task",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "gtest_helpers",
     headers = ["GtestHelpers.h"],
     exported_deps = [
@@ -330,7 +886,25 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "gtest_helpers",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["GtestHelpers.h"],
+    deps = [
+        "//xplat/folly:portability_gtest",
+        "//xplat/folly/debugging/exception_tracer:smart_exception_stack_trace_hooks",  # @manual
+        "//xplat/folly/debugging/exception_tracer:smart_exception_tracer",
+        "//xplat/folly/experimental/coro:blocking_wait",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:task",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "inline_task",
     headers = ["detail/InlineTask.h"],
     exported_deps = [
@@ -344,7 +918,26 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "inline_task",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["detail/InlineTask.h"],
+    exported_deps = [
+        "//xplat/folly:scope_guard",
+        "//xplat/folly:try",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:detail_malloc",
+        "//xplat/folly/experimental/coro:with_async_stack",
+        "//xplat/folly/lang:assume",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "invoke",
     headers = ["Invoke.h"],
     exported_deps = [
@@ -353,7 +946,21 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "invoke",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Invoke.h"],
+    exported_deps = [
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly/lang:customization_point",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "merge",
     headers = [
         "Merge.h",
@@ -377,7 +984,36 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "merge",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Merge.h",
+        "Merge-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:cancellation_token",
+        "//xplat/folly:executor",
+        "//xplat/folly:scope_guard",
+        "//xplat/folly/experimental/coro:async_generator",
+        "//xplat/folly/experimental/coro:baton",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:detail_barrier",
+        "//xplat/folly/experimental/coro:detail_barrier_task",
+        "//xplat/folly/experimental/coro:detail_current_async_frame",
+        "//xplat/folly/experimental/coro:detail_helpers",
+        "//xplat/folly/experimental/coro:mutex",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/experimental/coro:via_if_async",
+        "//xplat/folly/experimental/coro:with_cancellation",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "mutex",
     srcs = ["Mutex.cpp"],
     headers = ["Mutex.h"],
@@ -388,7 +1024,47 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "mutex",
+    srcs = ["Mutex.cpp"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Mutex.h"],
+    deps = ["//xplat/folly:portability"],
+    exported_deps = [
+        "//xplat/folly:executor",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:via_if_async",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "noexcept",
+    headers = ["Noexcept.h"],
+    exported_deps = [
+        ":task_wrapper",
+        ":via_if_async",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "noexcept",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Noexcept.h"],
+    exported_deps = [
+        ":task_wrapper",
+        ":via_if_async",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "promise",
     headers = ["Promise.h"],
     exported_deps = [
@@ -401,17 +1077,76 @@ cpp_library(
     ],
 )
 
-cpp_library(
-    name = "result",
-    headers = ["Result.h"],
-    exported_deps = [
-        "//folly:cancellation_token",
-        "//folly:exception_wrapper",
-        "//folly:try",
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "promise",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Promise.h"],
+    deps = [
+        "//xplat/folly:cancellation_token",
+        "//xplat/folly:futures_core",
+        "//xplat/folly:try",
+        "//xplat/folly/experimental/coro:baton",
+        "//xplat/folly/experimental/coro:coroutine",
     ],
 )
 
-cpp_library(
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "ready",
+    headers = ["Ready.h"],
+    exported_deps = [
+        ":result",
+        ":with_async_stack",
+        "//folly:executor",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "ready",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Ready.h"],
+    exported_deps = [
+        ":result",
+        ":with_async_stack",
+        "//xplat/folly:executor",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "result",
+    headers = ["Result.h"],
+    exported_deps = [
+        "//folly:exception_wrapper",
+        "//folly:operation_cancelled",
+        "//folly:try",
+        "//folly/result:result",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "result",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Result.h"],
+    exported_deps = [
+        "//xplat/folly:exception_wrapper",
+        "//xplat/folly:operation_cancelled",
+        "//xplat/folly:try",
+        "//xplat/folly/result:result",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "retry",
     headers = ["Retry.h"],
     exported_deps = [
@@ -428,7 +1163,29 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "retry",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Retry.h"],
+    exported_deps = [
+        "//xplat/folly:cancellation_token",
+        "//xplat/folly:constexpr_math",
+        "//xplat/folly:exception_wrapper",
+        "//xplat/folly:random",
+        "//xplat/folly:try",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:result",
+        "//xplat/folly/experimental/coro:sleep",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/experimental/coro:traits",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "rust_adaptors",
     headers = ["RustAdaptors.h"],
     exported_deps = [
@@ -442,7 +1199,10 @@ cpp_library(
     ],
 )
 
-cpp_library(
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "scope_exit",
     headers = ["ScopeExit.h"],
     exported_deps = [
@@ -459,7 +1219,56 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "scope_exit",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["ScopeExit.h"],
+    exported_deps = [
+        "//xplat/folly:exception_wrapper",
+        "//xplat/folly:executor",
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly:scope_guard",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:traits",
+        "//xplat/folly/experimental/coro:via_if_async",
+        "//xplat/folly/lang:assume",
+        "//xplat/folly/lang:customization_point",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "serial_queue_runner",
+    srcs = ["SerialQueueRunner.cpp"],
+    headers = ["SerialQueueRunner.h"],
+    exported_deps = [
+        ":baton",
+        ":task",
+        "//folly:exception_wrapper",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "serial_queue_runner",
+    srcs = ["SerialQueueRunner.cpp"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["SerialQueueRunner.h"],
+    exported_deps = [
+        "//xplat/folly:exception_wrapper",
+        "//xplat/folly/coro:baton",
+        "//xplat/folly/coro:task",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "shared_lock",
     headers = ["SharedLock.h"],
     exported_deps = [
@@ -469,7 +1278,22 @@ cpp_library(
     exported_external_deps = ["glog"],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "shared_lock",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["SharedLock.h"],
+    exported_deps = [
+        "//third-party/glog:glog",
+        "//xplat/folly:portability",
+        "//xplat/folly/experimental/coro:coroutine",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "shared_mutex",
     srcs = ["SharedMutex.cpp"],
     headers = ["SharedMutex.h"],
@@ -483,7 +1307,58 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "shared_mutex",
+    srcs = ["SharedMutex.cpp"],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["SharedMutex.h"],
+    deps = ["//xplat/folly:portability"],
+    exported_deps = [
+        "//xplat/folly:executor",
+        "//xplat/folly:spin_lock",
+        "//xplat/folly:synchronized",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:shared_lock",
+        "//xplat/folly/experimental/coro:via_if_async",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "shared_promise",
+    headers = [
+        "SharedPromise.h",
+    ],
+    exported_deps = [
+        "//folly:small_vector",
+        "//folly:synchronized",
+        "//folly:utility",
+        "//folly/coro:promise",
+        "//folly/futures:core",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "shared_promise",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["SharedPromise.h"],
+    deps = [
+        "//xplat/folly:futures_core",
+        "//xplat/folly:small_vector",
+        "//xplat/folly:synchronized",
+        "//xplat/folly:utility",
+        "//xplat/folly/experimental/coro:promise",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "sleep",
     headers = [
         "Sleep.h",
@@ -497,7 +1372,26 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "sleep",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Sleep.h",
+        "Sleep-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:futures_core",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:future_util",
+        "//xplat/folly/experimental/coro:task",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "small_unbounded_queue",
     srcs = [],
     headers = ["SmallUnboundedQueue.h"],
@@ -510,11 +1404,61 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "small_unbounded_queue",
+    srcs = [],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["SmallUnboundedQueue.h"],
+    exported_deps = [
+        "//xplat/folly/experimental/channels/detail:atomic_queue",
+        "//xplat/folly/experimental/coro:baton",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:mutex",
+        "//xplat/folly/experimental/coro:task",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "synchronized",
+    headers = ["Synchronized.h"],
+    exported_deps = [
+        ":shared_lock",
+        ":shared_mutex",
+        ":task",
+        ":traits",
+        "//folly:utility",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "synchronized",
+    srcs = [],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Synchronized.h"],
+    exported_deps = [
+        "//xplat/folly:utility",
+        "//xplat/folly/coro:shared_lock",
+        "//xplat/folly/coro:shared_mutex",
+        "//xplat/folly/coro:task",
+        "//xplat/folly/coro:traits",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "task",
     headers = ["Task.h"],
     exported_deps = [
+        ":await_immediately",
         "//folly:cancellation_token",
+        "//folly:default_keep_alive_executor",
         "//folly:executor",
         "//folly:glog",
         "//folly:portability",
@@ -543,13 +1487,62 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "task",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Task.h"],
+    exported_deps = [
+        ":await_immediately",
+        "//third-party/glog:glog",
+        "//xplat/folly:cancellation_token",
+        "//xplat/folly:default_keep_alive_executor",
+        "//xplat/folly:executor",
+        "//xplat/folly:futures_core",
+        "//xplat/folly:glog",
+        "//xplat/folly:portability",
+        "//xplat/folly:scope_guard",
+        "//xplat/folly:traits",
+        "//xplat/folly:try",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:current_executor",
+        "//xplat/folly/experimental/coro:detail_malloc",
+        "//xplat/folly/experimental/coro:detail_traits",
+        "//xplat/folly/experimental/coro:inline_task",
+        "//xplat/folly/experimental/coro:invoke",
+        "//xplat/folly/experimental/coro:result",
+        "//xplat/folly/experimental/coro:scope_exit",
+        "//xplat/folly/experimental/coro:traits",
+        "//xplat/folly/experimental/coro:via_if_async",
+        "//xplat/folly/experimental/coro:with_async_stack",
+        "//xplat/folly/experimental/coro:with_cancellation",
+        "//xplat/folly/io/async:request_context",
+        "//xplat/folly/lang:assume",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "task_wrapper",
     headers = ["TaskWrapper.h"],
     exported_deps = [":task"],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "task_wrapper",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["TaskWrapper.h"],
+    exported_deps = [":task"],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "timed_wait",
     headers = ["TimedWait.h"],
     exported_deps = [
@@ -564,7 +1557,27 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "timed_wait",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["TimedWait.h"],
+    exported_deps = [
+        "//xplat/folly:futures_core",
+        "//xplat/folly:optional",
+        "//xplat/folly/experimental/coro:baton",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:detail_helpers",
+        "//xplat/folly/experimental/coro:invoke",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/experimental/coro:traits",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "timeout",
     headers = [
         "Timeout.h",
@@ -577,11 +1590,35 @@ cpp_library(
         "//folly/coro:task",
         "//folly/coro:traits",
         "//folly/coro:with_cancellation",
+        "//folly/coro/safe:now_task",
         "//folly/futures:core",
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "timeout",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Timeout.h",
+        "Timeout-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly:cancellation_token",
+        "//xplat/folly:futures_core",
+        "//xplat/folly/coro/safe:now_task",
+        "//xplat/folly/experimental/coro:baton",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/experimental/coro:traits",
+        "//xplat/folly/experimental/coro:with_cancellation",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "traits",
     headers = ["Traits.h"],
     exported_deps = [
@@ -591,7 +1628,21 @@ cpp_library(
     exported_external_deps = [],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "traits",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["Traits.h"],
+    exported_deps = [
+        "//xplat/folly:traits",
+        "//xplat/folly/experimental/coro:coroutine",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "transform",
     headers = [
         "Transform.h",
@@ -604,7 +1655,53 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "transform",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = [
+        "Transform.h",
+        "Transform-inl.h",
+    ],
+    exported_deps = [
+        "//xplat/folly/experimental/coro:async_generator",
+        "//xplat/folly/experimental/coro:coroutine",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
+    name = "bounded_queue",
+    srcs = [],
+    headers = ["BoundedQueue.h"],
+    exported_deps = [
+        "//folly:mpmc_queue",
+        "//folly:producer_consumer_queue",
+        "//folly/coro:task",
+        "//folly/fibers:semaphore",
+    ],
+)
+
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "bounded_queue",
+    srcs = [],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["BoundedQueue.h"],
+    exported_deps = [
+        "//xplat/folly:mpmc_queue",
+        "//xplat/folly:producer_consumer_queue",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/fibers:semaphore",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "unbounded_queue",
     srcs = [],
     headers = ["UnboundedQueue.h"],
@@ -616,10 +1713,28 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "unbounded_queue",
+    srcs = [],
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["UnboundedQueue.h"],
+    exported_deps = [
+        "//xplat/folly/concurrency:unbounded_queue",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:task",
+        "//xplat/folly/fibers:semaphore",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "via_if_async",
     headers = ["ViaIfAsync.h"],
     exported_deps = [
+        ":await_immediately",
         "//folly:executor",
         "//folly:traits",
         "//folly/coro:coroutine",
@@ -636,7 +1751,31 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "via_if_async",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["ViaIfAsync.h"],
+    exported_deps = [
+        ":await_immediately",
+        "//third-party/glog:glog",
+        "//xplat/folly:executor",
+        "//xplat/folly:traits",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:detail_malloc",
+        "//xplat/folly/experimental/coro:traits",
+        "//xplat/folly/experimental/coro:with_async_stack",
+        "//xplat/folly/experimental/coro:with_cancellation",
+        "//xplat/folly/io/async:request_context",
+        "//xplat/folly/lang:customization_point",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "with_async_stack",
     headers = ["WithAsyncStack.h"],
     exported_deps = [
@@ -649,71 +1788,44 @@ cpp_library(
     ],
 )
 
-cpp_library(
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "with_async_stack",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["WithAsyncStack.h"],
+    exported_deps = [
+        "//xplat/folly:functional_invoke",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/experimental/coro:traits",
+        "//xplat/folly/lang:assume",
+        "//xplat/folly/lang:customization_point",
+        "//xplat/folly/tracing:async_stack",
+    ],
+)
+
+### this line is a hint for source control merge
+
+fbcode_target(
+    _kind = cpp_library,
     name = "with_cancellation",
     headers = ["WithCancellation.h"],
     exported_deps = [
+        ":await_immediately",
         "//folly:cancellation_token",
         "//folly/coro:coroutine",
         "//folly/lang:customization_point",
     ],
 )
 
-cpp_library(
-    name = "bounded_queue",
-    srcs = [],
-    headers = ["BoundedQueue.h"],
+non_fbcode_target(
+    _kind = folly_xplat_cxx_library,
+    name = "with_cancellation",
+    feature = triage_InfrastructureSupermoduleOptou,
+    raw_headers = ["WithCancellation.h"],
     exported_deps = [
-        "//folly:mpmc_queue",
-        "//folly:producer_consumer_queue",
-        "//folly/coro:task",
-        "//folly/fibers:semaphore",
-    ],
-)
-
-cpp_library(
-    name = "shared_promise",
-    headers = [
-        "SharedPromise.h",
-    ],
-    exported_deps = [
-        "//folly:small_vector",
-        "//folly:synchronized",
-        "//folly:utility",
-        "//folly/coro:promise",
-        "//folly/futures:core",
-    ],
-)
-
-cpp_library(
-    name = "cleanup",
-    headers = [
-        "Cleanup.h",
-    ],
-    exported_deps = [
-        "//folly/functional:invoke",
-    ],
-)
-
-cpp_library(
-    name = "auto_cleanup_fwd",
-    headers = [
-        "AutoCleanup-fwd.h",
-    ],
-    exported_deps = [
-        "//folly/coro:cleanup",
-        "//folly/coro:coroutine",
-    ],
-)
-
-cpp_library(
-    name = "auto_cleanup",
-    headers = [
-        "AutoCleanup.h",
-    ],
-    exported_deps = [
-        "//folly/coro:auto_cleanup_fwd",
-        "//folly/coro:collect",
-        "//folly/coro:task",
+        ":await_immediately",
+        "//xplat/folly:cancellation_token",
+        "//xplat/folly/experimental/coro:coroutine",
+        "//xplat/folly/lang:customization_point",
     ],
 )

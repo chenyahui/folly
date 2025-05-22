@@ -1,9 +1,11 @@
+load("@fbcode_macros//build_defs:build_file_migration.bzl", "fbcode_target")
 load("@fbcode_macros//build_defs:cpp_binary.bzl", "cpp_binary")
 load("@fbcode_macros//build_defs:cpp_library.bzl", "cpp_library")
 
 oncall("fbcode_entropy_wardens_folly")
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "fatal_helper",
     srcs = ["FatalHelper.cpp"],
     deps = [
@@ -13,7 +15,8 @@ cpp_binary(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "log_after_main",
     srcs = ["LogAfterMain.cpp"],
     deps = [
@@ -24,7 +27,8 @@ cpp_binary(
     ],
 )
 
-cpp_binary(
+fbcode_target(
+    _kind = cpp_binary,
     name = "log_after_main_no_init",
     srcs = ["LogAfterMainNoInit.cpp"],
     deps = [
@@ -32,7 +36,8 @@ cpp_binary(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "helpers",
     headers = ["helpers.h"],
     exported_deps = [
@@ -40,7 +45,8 @@ cpp_library(
     ],
 )
 
-cpp_library(
+fbcode_target(
+    _kind = cpp_library,
     name = "log_on_shutdown",
     srcs = ["LogOnShutdownLib.cpp"],
     deps = [
