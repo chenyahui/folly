@@ -1,3 +1,11 @@
+# 注意事项
+如果要在mac上看代码，需要先执行
+```bash
+sh install_deps_mac.sh
+```
+
+# 
+
 Folly: Facebook Open-source Library
 ===================================
 
