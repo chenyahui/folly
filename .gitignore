@@ -1,6 +1,7 @@
 *.o
 *.lo
 *.la
+.idea
 .dirstamp
 Makefile
 Makefile.in
